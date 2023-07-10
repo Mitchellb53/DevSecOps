@@ -1,0 +1,111 @@
+JQ helps filter JSON into an easier to manage and read format when looking at multiple entries 
+
+Tool information 
+jq --help
+
+Creates fake JSON entry. Then filters and presents it in a reasonable format as shown below 
+echo '{"cloudprovider":{"name":"AWS","url":"www.aws.com"}} ' | jq '.'
+
+{
+  "cloudprovider": {
+    "name": "AWS",
+    "url": "www.aws.com"
+  }
+}
+
+Similar example to one above except creates a random user profile each time including fake country, name, location and online details.  
+curl https://randomuser.me/api/ | jq '.'  
+
+To prettify a file we can use 
+jq '.' filename.json
+[
+  {
+    "details": {
+      "name": "AWS",
+      "url": "www.amazon.com"
+    },
+    "services": [
+      {
+        "type": "CI-CD",
+        "name": "AWS CodeBuild"
+      },
+      {
+        "type": "Secret management",
+        "name": "AWS Secrets Manager"
+      }
+    ]
+  },
+  {
+    "details": {
+      "name": "Azure",
+      "url": "www.azure.com"
+    },
+    "services": [
+      {
+        "type": "CI-CD",
+        "name": "Azure DevOps"
+      },
+      {
+        "type": "Secret management",
+        "name": "Azure Key Vault"
+      }
+    ]
+  },
+  {
+    "details": {
+      "name": "GCP",
+      "url": "www.cloud.google.com"
+    },
+    "services": [
+      {
+        "type": "CI-CD",
+        "name": "Cloud Build"
+      },
+      {
+        "type": "Secret management",
+        "name": "Secret Manager"
+      }
+    ]
+  }
+]
+
+Using .[] to iterate over each element 
+jq '.[] | .details' filename.json
+
+{
+  "name": "AWS",
+  "url": "www.amazon.com"
+}
+{
+  "name": "Azure",
+  "url": "www.azure.com"
+}
+{
+  "name": "GCP",
+  "url": "www.cloud.google.com"
+}
+
+If we wanted more information we can add the selections after the pipe 
+jq '.[] | {name: .details.name, url:.details.url}' learnjq.json
+
+If we just want 1 array then we can use this 
+
+jq '.[1] | {name: .details.name, url: .details.url}' filename.json which will highlight the second array as the first is selected by using 0 
+
+{
+  "name": "Azure",
+  "url": "www.azure.com"
+}
+
+Adding an array to the selection .[] has to be used to access the array.
+jq '.[] | {name: .details.name, url: .details.url, services: .services[]}' filename.json
+
+In order to eliminate duplicate results we can wrap the .services into a single array to get the desired result. 
+jq '.[] | {name: .details.name, url: .details.url, services: [.services[]]}' filename.json
+
+get service count for each of the cloud provider using length function in jq
+jq '.[] | {name: .details.name, servicecount: .services | length}' filename.json
+
+find details only for cloud provider AWS using the select function.
+jq '.[] | select(.details.name=="AWS")' filename.json
+
