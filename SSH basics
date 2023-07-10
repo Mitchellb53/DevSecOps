@@ -1,0 +1,58 @@
+If keys are set up already 
+
+ssh -i ~/.ssh/id_rsa root@prod-p9v0d2l8
+
+-i allows us to specify the private key to use to login into a remote machine
+root is a user we want to login as
+prod-p9v0d2l8 is the hostname of the server
+
+If we want to automate commands we have to remove the prompt every time we log in 
+ssh-keyscan -t rsa prod-p9v0d2l8 >> ~/.ssh/known_hosts  = This adds the machine to the known hosts on the prod environment and skips authentication warning 
+
+
+Using hostname we can determine what machine we are in 
+
+Running commands remotely on another machine 
+
+ssh root@prod-p9v0d2l8 "hostname"  Using this we can run any command on the remote machine. Anything in quotes will be executed
+
+
+Information 
+SSH enables password-less logins using public-private key pairs.
+Public-private key pairs are located in the ~/.ssh/ directory.
+
+
+The ssh server should be configured to allow password-less login, which can be done by un-commenting or adding the following two lines to the ssh configuration file (/etc/ssh/sshd_config)
+
+cat >> /etc/ssh/sshd_config <<EOF
+RSAAuthentication yes
+PubKeyAuthentication yes
+EOF.
+
+After a configuration change of the ssh server, a restart is required.
+
+If there are no key pairs that exist, or if this is the first time you are setting up ssh keys, you need to generate new pair of public-private keys (with RSA algorithm) with the command below:
+
+Generate new keys
+ssh-keygen -t rsa
+
+the private key will be stored at ~/.ssh/id_rsa, and the public key will be stored at ~/.ssh/id_rsa.pub.
+
+The remote machine needs to know the public key from where the connection is originating from. Since we have generated the public key at ~/.ssh/id_rsa.pub let’s use the ssh-copy-id command as below to let the remote machine allow connections.
+
+ssh-copy-id -i ~/.ssh/id_rsa.pub user@targetserver
+
+The above command will prompt you to provide a password for the user named user in order to complete authentication.
+
+After authentication, the ssh-copy-id command will read the public key from ~/.ssh/id_rsa.pub and adds the public key to ~/.ssh/authorized_keys on the targetserver.
+
+
+BIG RECAP 
+
+Here are a few key points to remember:
+
+sshd server needs to be configured to allow ssh
+ssh-keygen generates a new public-private key pair for authentication
+private key is never shared with anyone, it is only used during authentication
+public key needs to exported to ~/.ssh/authorized_keys on a server to which we need to connect to
+ssh-copy-id helps in copying public keys to the authorized_keys file
