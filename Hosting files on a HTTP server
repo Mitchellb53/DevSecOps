@@ -1,0 +1,18 @@
+Make a webpage file to host 
+
+cat > home_page.html <<EOL
+<html>
+<body>
+<p>Welcome to the home page!</p>
+</body>
+</html>
+EOL
+
+This will host the server using python3
+python3 -m http.server &
+
+Now the files can be accessed using the below link.
+
+https://devsecops-box-p9v0d2l8-8000.lab.practical-devsecops.training
+
+Files under the directory from where we ran the HTTP server can only be accessed using the HTTP server.
