@@ -1,0 +1,40 @@
+Initial git setup
+
+Email name 
+git config --global user.email "student@pdevsecops.com"
+User name
+git config --global user.name "student"
+
+
+Clone/download the repository
+
+git clone git@gitlab-ce-p9v0d2l8:root/django-nv.git   = This downloads the django-nv.git onto the local machine 
+
+Change into repository 
+cd django.nv 
+
+Check contents 
+ls -l
+
+Make needed changes  
+cat > myfile <<EOL
+This is my file
+EOL
+
+echo "Practical DevSecOps" >> README.md
+
+
+Check git status 
+git status
+
+Add changes to the repository stage 
+git add myfile README.md
+
+Make commitments to online repository 
+git commit -m "Add myfile and update README.md"    = -m is used to make any needed comments for tracking purposes
+
+upload these changes 
+git push 
+
+Download any new changes to the local machine 
+git pull
