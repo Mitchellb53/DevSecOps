@@ -1,0 +1,6 @@
+cat /etc/passwd > mypasswd.txt = > allows you to save the output of a command into another file or send it to another command for processing
+cat /etc/passwd >> mypasswd.txt = >> allows you to append conent onto a file so you can add onto a file and not overwrite the file
+echo $HOSTNAME = echo can be used to show pre-defined variables 
+echo "this is a string" > file.txt = echo can also be used to make files using > 
+cat mypasswd.txt | cut -d ':' -f 1 = | allows you to filter a files contents by using the cut command with -d ':' as a the cut off for each section and -f selecting the first section only showing usernames in the password file
+ps -aux | grep bash = | can also be used to search for a specific string such as using grep (a grabbing/searching function) to search for a bash process in this case
