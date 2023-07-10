@@ -1,0 +1,14 @@
+ls  = List files and directories 
+ls -l = one file per line
+ls -l randomname = searches for randomname to see if present 
+mkdir Name = make directory with specified name 
+rmdir Name = removes directory with specific name 
+pip3 install ansible==2.10.4 = installs specified applications, software or version updates such as ansible in this case
+& = Adding to the end of a command line will cause the code/function/service to run in the background
+pwd = Prints the working directory (where you currently are within the file system) 
+cd .. = Goes back to the previous directory
+nano = A file editor which can change text and save the result
+nano originalfile = By creating a new file name you can make a file from nothing.
+cat = Reads the specified file 
+mv = moves files and can also rename files if needed by using mv originalfilename newfilename
+A command line hack can be used which looks like this cat > filename <<EOL in order to continue writing on each line until EOL is typed
