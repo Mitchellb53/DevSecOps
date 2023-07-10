@@ -1,0 +1,10 @@
+chmod = chmod which allows for changing permissions of a file (including read, write and execute functions)
+ls -l filename = by using this command we can examine the permissions for a specific file
+stat filename = stat allows for more information about a specific files details (e.g. permissions details) 
+chmod +x filename = this gives a specific file name executable permissions
+./myfile = ./ this cause the specific file to be executed 
+sudo = this gives admin privilages to a command (if possible) 
+echo -e "pdevsecops\npdevsecops" | adduser --gecos "" john = creates a user called john (not sure if needed but handy to know) 
+usermod -aG sudo john = this will add the created user in this case john into the sudo group allowing them to use sudo
+sudo su - john = this changes into another user (in this case John) 
+exit = self explanitory as exits from a command or user shell for example
