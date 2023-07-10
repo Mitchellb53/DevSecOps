@@ -1,0 +1,8 @@
+An exit code of 0 normally indicates successful execution of a programme 
+An exit code of non 0 (e.g. 1 , 2 , 3 , 100 , 127) indicates unsuccessful execution of a programme. 
+
+Overall
+Zero exit code indicates a success
+Non-Zero exit code indicates a failure
+In the context of most security tooling, zero exit code means no vulnerabilities found, non-zero exit code means vulnerabilities found
+Non-Zero exit code can either be 1, or 13, or 99, or 255, or just any integer that is not a zero
