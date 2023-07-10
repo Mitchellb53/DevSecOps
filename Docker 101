@@ -1,0 +1,35 @@
+  Docker is used to host containers and their applications 
+
+Pull an image using pull
+docker pull ubuntu 
+
+For a simple command output when pulling -q can be used 
+docker pull -q alpine 
+
+To run a container in the background we can use -d (as in detatched mode) 
+docker run -d --name myubuntu ubuntu 
+
+If an image is not found when running for the first time it will automatically pull it 
+
+A docker image will close if no processes are associated with it and so to keep it open when run -i should be used to make it interactive if no process or command is set 
+docker run -d --name myubuntu -i ubuntu 
+
+To remove a container use rm and then the container name 
+docker rm myubuntu 
+
+To execute a command inside a container exec can be used 
+docker exec myubuntu whoami
+
+docker exec ubuntu cat /etc/lsb-release 
+
+You can also spawn a shell 
+docker exec -it myubuntu bash   
+
+To see the running processes in a container we can use top and the container name
+docker top myubuntu
+
+Runs a container named webserver and environment variable APP=nginx
+docker run -d --name webserver --env APP=nginx nginx:1.21.3
+
+Ports can be added using the -p function 
+docker run -d --name webserver --env APP=nginx -p 80:80 nginx:1.21.3
