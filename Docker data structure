@@ -1,0 +1,29 @@
+VOLUMES 
+To check the list of avalible volumes present 
+docker volume ls
+
+Create a volume using the below code 
+docker volume create (name) 
+
+The created volume will be located under the /var/lib/docker/volumes/ directory
+
+To append a created volume to a docker container we can use where name is substituted for the created volume name
+docker run --name ubuntu -d -v (name):/opt -it ubuntu:18.04
+
+To show persists of data after container deletion we can create a file inside the containers shell and then delete the container 
+
+docker exec -it ubuntu bash
+echo "Hello from the containers" > /opt/hello.txt
+exit
+docker rm -f ubuntu
+
+Then check under the name of the volume in the directory where it is located 
+ls /var/lib/docker/volumes/(name)/_data/
+
+The existing volume can be attached to another container on a different path (eg. /tmp) 
+docker run --name ubuntu1 -d -v (name):/tmp -it ubuntu:18.04
+
+If we look at the tmp directory we will be able to see the previously deleted data showing persistance 
+docker exec -it ubuntu1 ls /tmp
+
+BIND MOUNTS 
