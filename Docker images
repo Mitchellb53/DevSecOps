@@ -1,0 +1,30 @@
+First download source code 
+git clone (source code url) 
+
+Then change into Image directory 
+cd django.nv 
+
+Read the dockerfile which contains image construction instructions
+cat Dockerfile
+
+A dockerfile contains these components
+
+FROM	Initialize an operating system that will be used as a base
+COPY	Copy files or directories from the host to the container
+WORKDIR	Sets the working directory similar to cd command on Linux
+RUN	Execute commands in the current image
+
+
+We can build the image using this command 
+docker build -t django.nv:1.0 .
+
+Once the image has been built we can see it using docker images 
+
+To rename an image we can use docker tag function 
+docker tag django.nv:1.0 django.nv:1.1
+
+You can also overwrite the entry point of the application by using --entrypoint. If an entrypoint is already established it can be changed within the dockerfile and edited accordingly 
+docker run --name webserver -it --entrypoint /bin/bash django.nv:1.0
+
+To remove an image rmi is used (the container must be exited and potentially stopped before being removed)  
+docker rmi django.nv:1.0
