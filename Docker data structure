@@ -27,3 +27,32 @@ If we look at the tmp directory we will be able to see the previously deleted da
 docker exec -it ubuntu1 ls /tmp
 
 BIND MOUNTS 
+Bind mounts allow for a mount a host's directory into a containers directory 
+
+Running a bind mount on a docker image can be conducted by using the below code where /opt directory is the where the bind mount is located and will map the hosts directory to the container 
+docker run --name ubuntu2 -d -v /opt:/opt -it ubuntu:18.04 
+
+This means that any file generated on the Bind mount directory, located at /opt, will automatically update and be present within the container 
+
+This can be seen through this exchange where the generated text will be present in the container 
+
+echo "Hello from the host" > /opt/hello.txt
+docker rm -f ubuntu2
+docker run --name ubuntu2 -d -v /opt:/opt -it ubuntu:18.04
+docker exec -it ubuntu2 bash
+ls /opt
+
+If the file is removed from the container system it is also removed from the Host system meaning the storage is shared and deletion from one location will remove it from both locations
+
+TMPFS
+Tmpfs mount will not save the data persistently as it uses host’s memory(RAM) as a temporary storage.
+
+QUESTION 
+Create a container with name bindmount using ubuntu:18.04 image. Mount the above file (not the directory) as a bind mount inside this container at /src location
+
+docker run --name bindmount -v /opt/hello.txt:/src/hello.txt ubuntu:18.04
+
+
+Run an another ubuntu:18.04 container with name volumemount. Mount the data volume we just created into the container at /src location. Create a file /src/hello.txt in this container with some random text
+
+docker run --name volumemount -v data:/src ubuntu:18.04 "/bin/bash" "-c" "echo test>>/src/hello.txt"
