@@ -1,0 +1,43 @@
+Clone repository 
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv
+
+Change into app
+cd django.nv
+
+Check that dockerfile is present 
+cat Dockerfile
+
+Build the image
+docker build -t django.nv:1.0 .
+
+
+Check images after being built
+docker images
+
+To store the image, we need the docker repository called registry. We can deploy a registry server locally using the following command.
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+If the image doesn’t exist, docker will pull automatically from DockerHub
+
+After the registry is up, we can push the image(s), but we need to add the image name with the registry url as a prefix. e.g., REGISTRY_URL/IMAGE_NAME:IMAGE_TAG
+docker tag django.nv:1.0 localhost:5000/django.nv:1.0
+
+Then, push the image to the docker registry.
+docker push localhost:5000/django.nv:1.0
+
+Then check the image registry using curl 
+curl localhost:5000/v2/_catalog
+
+QUESTIONS 
+
+Code to login to the Docker Hub registry via Command Line Interface 
+docker login -u your-docker-username -p your-docker-password  OR  docker login 
+
+Push or upload django.nv:1.0 image you created in the previous steps of the exercise to Docker Hub
+docker tag django.nv:1.0 dockerhubusername/django.nv:1.0
+
+docker push dockerhubusername/django.nv:1.0=
+
+Stop the registry container and remove the django.nv images to save the disk space
+docker stop registry
+docker rmi django.nv:1.0
