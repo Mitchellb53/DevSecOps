@@ -1,0 +1,66 @@
+NETWORK TYPES 
+
+bridge = This is the default network driver when you don’t specify a driver for the containers. Containers on the same bridged network can speak to each other, but are isolated from containers on other bridged networks. All containers can access the external network through NAT
+host = The containers use the host’s networking directly, while retaining separation on storage and processing. Ports exposed by the container are exposed on the external network using the host’s IP address
+macvlan =	When creating a macvlan, you assign a parent network device (e.g. “eth0”). Each container on the macvlan network will receive its own MAC address on the network that eth0 is connected to. Each container has full network access. Warning: when misconfigured, you may overrun the network with too many MACs, or you may duplicate IP addresses
+none =	networking is disabled with this network driver, containers cannot communicate to each other, nor with the external network
+
+If stuck 
+docker network --help
+
+To see avaliable networks 
+docker network ls  or  docker network list
+
+Create a network using network create function (default is bridge) 
+docker network create mynetwork
+
+Docker inspect can be used to see more about the network 
+docker inspect mynetwork
+
+We can attach the network to any container with the following command.
+docker run -d --name ubuntu --network mynetwork -it ubuntu:18.04
+
+We can test the network connectivity in the container by executing apt update command. If the below command works, then the container is able to reach external world, including the DNS server.
+docker exec ubuntu apt update
+
+Lets clean up by removing the container and the network we created before.
+docker rm -f ubuntu
+docker network rm mynetwork
+
+
+Macvlan
+We can create macvlan network by using the following command.
+docker network create --driver macvlan mymacvlan
+
+If we run ifconfig, we will see there is an interface with the name dm-8df059075f38. The network interface name in this case is dm-8df059075f38, it might be different in your case, however it would start with dm-.
+ifconfig
+
+Attach the
+network to a new container using this command 
+docker run -d --name ubuntu --network mymacvlan -it ubuntu:18.04
+
+The network can then inspected and the information can be cleaned up using jq 
+docker inspect ubuntu -f "{{json .NetworkSettings.Networks }}" | jq
+
+None (NO NETWORK) 
+This network disables/isolates the network in the container(s).
+Create a container with no network 
+docker run -d --name ubuntu --network=none -it ubuntu:18.04
+
+Explore the network again using inspect 
+docker inspect ubuntu -f "{{json .NetworkSettings.Networks }}" | jq
+
+QUESTIONS 
+Create a network with bridge driver called app and define 172.10.2.0/16 as a subnet
+
+docker network create --help
+docker network create app --subnet "172.10.2.0/16"
+
+Run the container with ubuntu:18.04 image in the background and give it the name myubuntu
+docker run -d -it --name myubuntu ubuntu:18.04
+
+Attach app network to the myubuntu container
+docker network connect app myubuntu
+
+What would happen if we remove the network driver without killing the container?
+docker network rm app (FAILED AS CONTAINER STILL ACTIVE) 
