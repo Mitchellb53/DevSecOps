@@ -1,0 +1,170 @@
+Now, we will discuss about Docker Compose. This tool allows us to handle multiple containers using a single file called docker-compose.yml.
+
+Before moving forward, we need to know what are the differences between Docker and Docker Compose.
+
+Let’s take an example to understand the differences.
+
+First, we will try to run a container using docker run command.
+
+docker run -d --name ubuntu -i ubuntu:18.04
+
+Next, lets accomplish the above task, that is running a container using Docker Compose. Can we just change the docker command to docker-compose command to make it work? No, because Docker Compose expects a docker-compose.yml YAML file containing the above instructions in a pre-defined format.
+
+cat >docker-compose.yml<<EOF
+version: "3"
+
+services:
+  ubuntu:
+    image: ubuntu:18.04
+    container_name: ubuntu1
+    stdin_open: true        # the same way like docker run -i
+EOF
+
+
+As you can see in the above docker-compose.yml file, we are creating a container called ubuntu using ubuntu:18.04 (line number 6) image while keeping the stdin open (line number 7).
+
+Let’s try running the container using docker-compose with the following command.
+docker-compose up -d
+
+As you can notice in the above command output, the docker compose created a network during the provisioning.
+
+Now, We’ve run both ubuntu containers using docker and docker-compose command, lets verify their behaviour using the docker ps command.
+
+docker ps
+
+Did you notice the similarities? We created ubuntu containers using different approaches but we are seeing similar container behaviour.
+
+Remember
+
+In order to move to the next steps, let’s remember to clean up by using the following command.
+
+docker rm -f $(docker ps -aq)
+
+The above command kills all containers.
+
+You can also use
+docker-compose down
+which would bring down the services (read ‘services’ as ‘containers’, for now) defined in the docker-compose.yml in the current working directory.
+
+Now, imagine you have to run 3 or more containers for an application/task in the same network. To achieve the desired result, you would have to run the docker run command multiple times. It’s neither easy nor efficient.
+
+Docker provides a better alternative called docker compose. You would define your desired container behavior in the docker-compose.yml file and use docker compose to provision them.
+
+In the next step, you will learn more about Docker Compose.
+
+Let’s explore the basic syntax used in the docker-compose.yml file
+
+version: "3"
+
+services:
+  web:
+    image: nginx
+    container_name: webserver       # name of container
+    ports:
+     - "80:80"                      # similar to docker run -p 80:80
+    environment:
+     - NGINX_HOST=example.com       # similar to docker run -e VAR=value
+    volumes:
+     - ./:/var/www/html/app             # ./ means a bind mounts
+     - image_data:/var/www/html/images  # image_data means use docker volume
+
+volumes:
+  image_data:                       # similar to docker volume create
+
+
+The above docker-compose.yml has these instructions in it.
+
+Syntax	Descriptions
+version	Version of compose file format to use, check out this link
+image	Specify the image to run
+container_name	Specify a custom container name, rather than a default name
+ports	Expose port(s), similar to docker run -p argument
+environment	Add environment variables into the container by defining a key-value pair
+volumes	Volumes to save our data persistently using various options type like bind or volumes
+
+Now, let us create docker-compose.yml file in a different directory
+
+cat >~/docker-compose.yml<<EOF
+version: "3"
+
+services:
+  ubuntu:
+    image: ubuntu:18.04
+    container_name: myubuntu
+    volumes:
+     - data:/opt
+
+  alpine:
+    image: alpine:3.13
+    container_name: myalpine
+    volumes:
+     - data:/tmp
+
+volumes:
+  data:
+EOF
+
+Lets run the following commands to navigate to the ~ (home) directory, and use docker-compose to bring up our services.
+
+cd ~/
+docker-compose up -d
+
+Check the containers process.
+
+docker-compose ps
+
+Why these two containers have stopped (exited (0))? Because there is no main process running inside the container, we can make the containers running by adding a process like shell or sleep command.
+
+For now, let’s bring down all the services so we can move to the challenge in the next step.
+
+docker-compose down
+
+
+QUESTION 
+Create a compose file at /opt/docker-compose.yml with service name webserver using nginx image, binding port 80 from container to 8080 in the host and make sure the containers is running (not exited)
+
+
+cat > /opt/docker-compose.yml<<EOF
+version: "3"
+services:
+  webserver:
+    image: nginx
+    container_name: webserver
+    ports:
+
+EOF
+
+Add docker volume name data into webserver service and mapping it to /usr/share/nginx/html
+     - 8080:80
+
+cat > /opt/docker-compose.yml<<EOF
+version: "3"
+services:
+  webserver:
+    image: nginx
+    container_name: webserver
+    ports:
+     - 8080:80
+    volumes:
+     - data:/usr/share/nginx/html
+
+volumes:
+  data:
+EOF
+
+
+Create a random file with hello world text inside the webserver container and save it in /usr/share/nginx/html/hello.html
+
+Before starting to create a file inside the container, we will need to start the container first.
+
+The docker-compose.yml file is located at the /opt directory. So we can either cd in to the /opt directory, and then run docker-compose up -d or use the below command to run docker-compose with a docker-compose.yml file in another location.
+
+docker-compose -f /opt/docker-compose.yml up -d
+
+After the services are up, you can create a file inside the container container using docker exec or docker-compose exec.
+
+docker exec webserver sh -c 'echo "hello world" > /usr/share/nginx/html/hello.html'
+
+Or
+
+docker-compose exec webserver sh -c 'echo "hello world" > /usr/share/nginx/html/hello.html'
