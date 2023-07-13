@@ -1,0 +1,61 @@
+Docker snapshots 
+
+Docker Save vs Docker Export
+
+we’ve learned the basic usage of Docker containers such as: how to manage data, networking, registry, and so on.
+
+First, we will discuss how to backup the container into a compressed file using two commands docker save and docker export. Then we will understand the differences between the two.
+
+First, we will try to run a container using docker run command.
+
+docker run -d --name ubuntu -i ubuntu:18.04
+
+Next, lets try to execute some commands in the container.
+
+docker exec -it ubuntu bash
+
+apt update && apt install -y nginx
+
+exit 
+
+docker save command only works with the image, it can’t create a snapshot from the container.
+
+docker save ubuntu > ubuntu-save.tar
+
+The above command will save the ubuntu container into a file,
+
+View the file size using ls -l --block-size=M and you will notice the compressed file only 63M.
+
+What would be the size when we use docker export command?
+
+docker export ubuntu > ubuntu-export.tar
+
+ls -l --block-size=M
+
+The size is 2x more than docker save command. why? save only saves the image layers, history and deleted/overridden files. It doesn’t save the current state of container even after we executed the command like apt update and also installed the package. This should have also increased the size of image but it did not increase the size when using docker save.
+
+We have created the snapshot, now we will try to import the snapshot and run it.
+
+docker load -i ubuntu-save.tar
+
+As you can see, from ubuntu-save.tar its say ubuntu:18.04 image is loaded.
+
+docker import ubuntu-export.tar ubuntu-export
+
+See the images.
+
+docker images
+
+ubuntu-export saves our last state when we installed nginx, lets check it.
+
+docker run -d --name ubuntu -i ubuntu-export
+
+We got an error when we try to run this image, lets check the history of image.
+
+docker history ubuntu-export
+
+Based on the above result, we now know that if we use export then it doesn’t save USER, EXPOSE, RUN and other syntax that we used when creating Dockerfile. If you notice it only has one layer.
+
+Where as docker export flattens the image, used on running containers. It doesn’t save the volume. You will have to save it separately if that’s of interest to you.
+
+docker save is used on images. It stores layers and other metadata from docker images.
