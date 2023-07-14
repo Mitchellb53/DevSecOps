@@ -1,1 +1,65 @@
+Let’s log into GitLab using the following details.
+
+Name	Value
+URL	https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/-/blob/main/.gitlab-ci.yml
+Username	root
+Password	pdso-training
+
+The first step when running the pipeline is to create the environment inside the GitLab CI/CD Pipeline before the jobs start running. As soon as the pipeline starts, the job will pull the docker image to build the environment for the first time while the job is running
+
+While reading the sources, the next step is to execute the scripts that we have defined in .gitlab-ci.yml file.
+
+image: docker:20.10
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+job:
+  stage: build
+  script:
+    - echo "I'm a job"
+
+Next, we will create new job named job2 and add ls command to view the contents inside the runner using the following script:
+
+job2:
+  stage: test
+  script:
+    - ls -la
+
+Lets edit .gitlab-ci.yml file content inside the project and copy the above code by click on the Edit button or visit this link
+
+Check the last pipeline and click on the appropriate job name.
+
+You will see that the output is the same as what we have in the repository. Why? By default, GitLab Runner will clone the repository itself as the working directory, so you no longer need to add the git clone command.
+
+Let’s add the new job called docker in build stage by visiting GitLab pipeline editor and copy the following content.
+
+docker:
+  stage: build
+  script:
+    - docker run --rm -v $(pwd):/app alpine ls /app
+    - ls -la
+Click Commit changes button and go back to the pipeline page.
+
+You should pay attention to the string $(pwd):/app. In this string, $(pwd) represents the present working directory of our pipeline environment, while /app represents the target container directory.
+
+In the last changes, we are attempting to list the files from the /app directory inside the container and list the files in the current directory. In that case, we can also try to create a file inside the container and see if it is reflected in the same working directory of the pipeline.
+
+Lets edit the .gitlab-ci.yml file once again and change job2 into the following content.
+
+docker:
+  stage: build
+  script:
+    - docker run --rm -v $(pwd):/app alpine sh -c 'echo "output here" > /app/myfile'
+    - ls -la
+
+Once you check the pipeline output, it will give us the same result as below.
 
