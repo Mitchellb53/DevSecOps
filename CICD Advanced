@@ -1,1 +1,174 @@
 
+# This is how a comment is added to a YAML file; please read them carefully.
+
+stages:   # Dictionary
+ - build   # this is build stage
+ - test    # this is test stage
+ - integration # this is an integration stage
+ - prod       # this is prod/production stage
+
+build:       # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build    # this job belongs to the build stage. Here both job name and stage name is the same, i.e., build
+  script:
+    - echo "This is a build step."  # We are running an echo command, but it can be any command.
+
+test:
+  stage: test
+  script:
+    - echo "This is a test step."
+    - exit 1         # Non zero exit code, fails a job.
+
+integration:        # integration job under stage integration.
+  stage: integration
+  script:
+    - echo "This is an integration step."
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+
+As discussed in the Linux basics exercises, a process shares its pass/fail status via exit codes. The CI/CD systems also behave similarly and use exit codes to either pass or fail a job/stage.
+
+You will notice that test has exit 1. When you add/edit this job in Gitlab, it will fail the build because of exit 1. CI/CD systems look for exit codes to determine if a job passed or failed.
+
+For example, you ran a security tool on your codebase, and it found some security issues, then the security tool might give a non zero exit code. Non zero exit code fails a job (red color), but if the tool gives you a zero exit code (green color) CI/CD system will mark it as passed.
+
+By default, most CI/CD systems take the last command’s exit code. If you have multiple commands and some failed, but the last one passed, then the CI system will mark the job as passed.
+
+You do not want to fail the builds in DevSecOps Maturity Levels 1 and 2. If a security tool fails a build upon security findings, you would not want this job to block the other jobs and stages as there could be false positives in the results.
+
+You can use the allow_failure tag to “not fail the build” even though the tool found issues.
+
+test:
+  stage: test
+  script:
+     - execute_script_that_will_fail
+  allow_failure: true   #<--- allow the build to fail but
+
+
+The pipeline would look like the following.
+
+stages:   # Dictionary
+ - build   # this is build stage
+ - test    # this is test stage
+ - integration # this is an integration stage
+ - prod       # this is prod/production stage
+
+build:       # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build    # this job belongs to the build stage. Here both job name and stage name is the same i.e., build
+  script:
+    - echo "This is a build step"  # We are running an echo command, but it can be any command.
+
+test:
+  stage: test
+  script:
+    - echo "This is a test step."
+    - exit 1         # Non zero exit code, fails a job.
+  allow_failure: true   #<--- allow the build to fail, but don't mark it as such
+
+
+integration:        # integration job under stage integration.
+  stage: integration
+  script:
+    - echo "This is an integration step"
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+
+To manage found vulnerabilities during the scan, we would like to store the scan results in a file and save it on the CI system for further processing.
+
+You can store the tool result(s) in a file using the artifacts tag as shown below.
+
+someScan:
+  script: ./security-tool.sh    # <-- this tool generates vulnerabilities.json as output
+  artifacts:                    # <--- To save results, we use artifacts tag
+    paths:                      # <--- We then give the path/paths of the scan result files we want to store for further processing
+    - vulnerabilities.json                  #<--- The filename
+    expire_in: 1 week       # <--- To save disk space, we
+
+As you can see above, we need to specify the output file’s path on line numbers 4 and 5 and the expiration(line number 6) under the artifacts tag.
+To keep our pipeline simple for everyone, we will echo the JSON string into a file for now instead of running a security tool.
+
+
+stages:   # Dictionary
+ - build   # this is build stage
+ - test    # this is test stage
+ - integration # this is an integration stage
+ - prod       # this is prod/production stage
+
+build:       # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build    # this job belongs to the build stage. Here both job name and stage name is the same i.e., build
+  script:
+    - echo "This is a build step"  # We are running an echo command, but it can be any command.
+    - echo "{\"vulnerability\":\"SQL Injection\"}" > vulnerabilities.json
+  artifacts:      # notice a new tag artifacts
+    paths: [vulnerabilities.json]   # this is the path to the output.json file
+
+test:
+  stage: test
+  script:
+    - echo "This is a test step."
+    - exit 1         # Non zero exit code, fails a job.
+  allow_failure: true   #<--- allow the build to fail but don't mark it as such
+
+integration:        # integration job under stage integration.
+  stage: integration
+  script:
+    - echo "This is an integration step."
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+
+You will notice that build job generates the output.json, and if we do not specify expire_in tag, the output file will live on the CI System indefinitely.
+
+Implement Continuous Delivery
+
+If you wish to have a human approval process before deployment, you can use the continuous delivery feature of Gitlab using the when tag.
+
+As you can see below, using a when: manual tag, we can enforce a human intervention (click the play button in Gitlab) to run a job (deployment).
+
+deploy_prod:
+  stage: deploy
+  script:
+    - echo "Deploy to prod server."
+  when: manual   #<-- A human has to click a button for pipeline to play
+
+To keep our pipeline simple for everyone, instead of deploying an app, we will add when tag to the pipeline.
+
+stages:   # Dictionary
+ - build   # this is build stage
+ - test    # this is test stage
+ - integration # this is an integration stage
+ - prod       # this is prod/production stage
+
+build:       # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build    # this job belongs to the build stage. Here both job name and stage name is the same i.e., build
+  script:
+    - echo "This is a build step"  # We are running an echo command, but it can be any command.
+    - echo "{\"vulnerability\":\"SQL Injection\"}" > output.json
+  artifacts:      # notice a new tag artifacts
+    paths: [output.json]   # this is the path to the output.json file
+
+test:
+  stage: test
+  script:
+    - echo "This is a test step."
+    - exit 1         # Non zero exit code, fails a job.
+  allow_failure: true   #<--- allow the build to fail but don't mark it as such
+
+integration:        # integration job under stage integration.
+  stage: integration
+  script:
+    - echo "This is an integration step."
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+  when: manual   #<-- A human has to click a button (play button in Gitlab) for this task to
+
