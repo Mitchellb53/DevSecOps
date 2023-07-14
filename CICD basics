@@ -1,0 +1,76 @@
+CICD basics 
+
+YAML is more comfortable for humans to read and write than more common data formats like XML or JSON. This format is typically used to configure systems like CI/CD systems, Infrastructure as Code tools, Kubernetes, and much more.
+
+YAML files start with optional three dashes (—).
+
+e.g.,
+
+---
+# A list of gadgets
+- Sony
+- LG
+- Apple
+- Samsung
+
+Gitlab CI/CD uses this list concept to create stages. Notice the lack of dashes (—) below.
+
+ - build        # this is build stage
+ - test         # this is test stage
+ - integration  # this is an integration stage
+ - prod         # this is prod/production stage
+
+A dictionary (key/value pair) is represented in a simple key: value form (the colon should be followed by a space).
+
+Gitlab CI/CD uses this to configure individual settings in a job.
+
+  stage: test
+  image: node:alpine3.10
+  script: echo "hello world"
+
+A dictionary can have other dictionaries or lists in them.
+
+test:
+  stage: test   # Dictionary item stage with the value test
+  script:       # Dictionary item with a list as the value
+    - echo "This is a test step."
+    - exit 1         # Non zero exit code, fails a job.
+
+We see job1 as the job name and have set the stage to build. We can change the job name to something else, such as:
+
+builder:
+  stage: build   # this job belongs to the build stage.
+  script:
+    - echo "This is a build step."
+
+Combining these concepts, we can create a simple Gitlab CI/CD pipeline with four stages and four jobs.
+
+# This is how a comment is added to a YAML file; please read them carefully.
+
+stages:         # Dictionary
+ - build        # this is build stage
+ - test         # this is test stage
+ - integration  # this is an integration stage
+ - prod         # this is prod/production stage
+
+job1:
+  stage: build  # this job belongs to the build stage.
+  script:
+    - echo "This is a build step."  # We are running an echo command, but it can be any command.
+
+job2:
+  stage: test
+  script:
+    - echo "This is a test step."
+    - exit 1          # Non zero exit code, fails a job.
+
+job3:          # stage integration.
+  stage: integration
+  script:
+    - echo "This is an integration step."
+
+job4:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+Now that we know the basics of the YAML format.
