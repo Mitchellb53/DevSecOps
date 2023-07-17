@@ -1,0 +1,20 @@
+This tool (pip-audit) is used against a git repository to scan rhe code as a OAST tool 
+
+Clone the repository 
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+cd into the app 
+
+cd webapp
+
+Install pip audit
+
+pip3 install pip-audit==1.1.2
+
+Run the scanner 
+
+pip-audit -r ./requirements.txt -f json | tee pip-audit-output.json
+
+Should find multiple security issues in third-party components.
+
