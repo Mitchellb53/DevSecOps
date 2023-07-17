@@ -1,0 +1,79 @@
+This section will look at including or excluding jobs from a pipeline in a CI/CD system 
+
+Certain rules can be added to change how a pipeline is run to alter jobs 
+
+IF RULES 
+
+For example the IF rule will run a job if the a condition is met for example a certain branch name or a certain job is successfull 
+Special comparative expresions can be used in conjunction with the IF rule such as (==, !=, =~, ~=) and conjunction/disjunction like (&&, ||)
+
+An example of the if rule in action can be seen below 
+
+stages:         # Dictionary
+ - build        # this is build stage
+ - test         # this is test stage
+ - integration  # this is an integration stage
+ - prod         # this is prod/production stage
+
+build:              # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build      # this job belongs to the build stage. Here both job name and stage name is the same, i.e., build
+  script:
+    - echo "This is a build step."          # We are running an echo command, but it can be any command.
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'   # this job will get triggered when the branch name is __main__
+
+If no attributes are defined in rules clause, the defaults are when: on_success and allow_failure: false. That is by default execute this job when the previous jobs in earlier stages succeeded (when: on_success), and fail the entire build if this job fails to run (allow_failure: false).
+
+CHANGE RULES 
+
+A change rule will specify to only run a job when something is changed, for example when a certain file name is modified such as dockerfile
+
+Rules can also be combined into one job (E.g. an if rule and change rule present in one job) which we can see below: 
+
+stages:         # Dictionary
+ - build        # this is build stage
+ - test         # this is test stage
+ - integration  # this is an integration stage
+ - prod         # this is prod/production stage
+
+build:              # this is job named build, it can be anything, job1, job2, etc.,
+  stage: build      # this job belongs to the build stage. Here both job name and stage name is the same, i.e., build
+  script:
+    - echo "This is a build step."          # We are running an echo command, but it can be any command.
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - Dockerfile
+
+ALLOW_FAILURE RULES 
+
+This one we have used before and either allows or denies a job from being run based on if it has failed, E.g. an 1 exit code is produced after a vulnerability is found
+
+stages:         # Dictionary
+ - build        # this is build stage
+ - test         # this is test stage
+ - integration  # this is an integration stage
+ - staging      # this is staging stage
+ - prod         # this is prod/production stage
+
+job4:
+  stage: staging
+  script:
+    - echo "This is a deploy step to staging environment."
+    - exit 1    # Non zero exit code, fails a job.
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'   # this job will get triggered when the branch name is __main__
+      allow_failure: true
+
+job5:
+  stage: prod
+  script:
+    - echo "This is a deploy step to production environment."
+  rules:
+    - if: '$CI_COMMIT_TAG !~ "/^$/"'   # this job will trigger when you create a new tag
+      when: manual
+
+In this file:
+
+job4: if the changes are pushed to main branch, job4 will run, and the pipeline will continue to run the next job because there is allow_failure: true even though there is an exit 1 indicting a job failure
+job5: if the changes are pushed for a new tag with any name, and need a human approval before the job can run
