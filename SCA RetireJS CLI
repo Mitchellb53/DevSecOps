@@ -1,0 +1,87 @@
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+cd webapp
+
+RetireJS uses Node JS and NPM dependences. We have to install these before we can run RetireJS 
+
+
+CODE TO DOWNLOAD NODEJS AND NPM 
+curl -sL https://deb.nodesource.com/setup_16.x | bash -
+apt install nodejs -y
+npm install -g retire@3.2.3
+npm install
+
+RUN THE SCANNER 
+
+Check that dependancies are being stored in Package.json 
+
+cat package.json
+
+retire --outputformat json --outputpath retire_output.json
+
+--outputpath : flag specifies the output file path.
+--outputformat : flag specifies that output format. Here it’s the JSON format.
+
+See output using 
+
+cat retire_output.json | jq
+
+QUESTION 
+
+Configure retirejs such that it only throws non zero exit code when high severity issues are present in the results
+
+retire --severity high --outputformat json --outputpath retire_output.json
+
+
+
+Mark all high severity issues as False Positive and save the output in JSON format at location /webapp/retire_output.json
+
+Change issues using VI or NANO 
+
+cat >/webapp/.retireignore.json<<EOF
+[
+    {
+        "component": "jquery",
+        "justification" : "False Positive"
+    },    
+    {
+        "component": "qs",
+        "version": "0.6.6",
+        "justification" : "False Positive"
+    },
+    {
+        "component": "tough-cookie",
+        "version": "2.2.2",
+        "justification" : "False Positive"
+    },
+    {
+        "component": "handlebars",
+        "version": "4.0.5",
+        "justification" : "False Positive"
+    },
+    {
+        "component": "growl",
+        "version": "1.9.2",
+        "justification" : "False Positive"
+    },
+    {
+        "component": "adm-zip",
+        "version": "0.4.4",
+        "justification" : "False Positive"
+    },
+    {
+        "component":"dojo",
+        "version": "1.4.2",
+        "justification" : "False Positive"
+    },
+    {
+        "component":"underscore.js",
+        "version": "1.8.3",
+        "justification" : "False Positive"
+    }
+]
+EOF
+
+and then ignore the issues by using this code 
+
+retire --severity high --ignorefile .retireignore.json --outputformat json --outputpath retire_output.json
