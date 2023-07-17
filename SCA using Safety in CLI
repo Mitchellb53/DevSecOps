@@ -1,0 +1,24 @@
+Safety is used to scan python dependencies for vulnerabilities
+
+For all DevSecOps work, testing should be conducted locally before any changes are made to the CICD pipeline 
+
+First clone the git repository to make a local version 
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+Change into the application code 
+
+cd webapp
+
+Install safety using this code 
+
+pip3 install safety==2.3.5
+
+We can explore what options safety provide using safety check --help
+
+The scanner can then be run using 
+
+safety check -r requirements.txt --json | tee safety-output.json
+
+where -r is the flag for the input file and --json specifies the output to be a JSON format
+
