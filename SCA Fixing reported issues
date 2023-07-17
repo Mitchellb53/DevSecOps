@@ -1,0 +1,38 @@
+Download the source code 
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+Change into app 
+
+cd webapp
+
+Install safety
+
+pip3 install safety=2.3.5
+
+Run the scanner 
+
+safety check -r requirements.txt --json | tee safety-output.json
+
+Fixing the Issues
+
+The tool found many vulnerable components in the source code.
+
+To fix these issues, we would need to see what components are installed in the system by having a look at requirements.txt file.
+
+cat requirements.txt
+
+Only one component needs to be upgraded to fix the issues. You can find out the safe versions of Django by visiting https://pypi.org/project/Django/#history. At the time of writing this exercise, we found the version ___3.2__ of Django does not have any vulnerabilities.
+
+Edit the requirements.txt file to use version 3.2.
+
+cat >requirements.txt<<EOF
+Django==3.2
+EOF
+
+
+Run the scanner again to see if the issue persists 
+safety check -r requirements.txt --json | tee safety-output.json
+
+No issue should persist as a safe version of Django has been updated in the repositiory
+
