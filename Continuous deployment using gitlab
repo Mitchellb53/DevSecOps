@@ -1,0 +1,185 @@
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env                       # Create a virtual environment for the python application
+   - source env/bin/activate              # Activate the virtual environment
+   - pip install -r requirements.txt      # Install the required third party packages as defined in requirements.txt
+   - python manage.py check               # Run checks to ensure the application is working fine
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+release:
+  stage: release
+  script:
+   - docker build -t $CI_REGISTRY_IMAGE .  # Build the application into Docker image
+   - docker push $CI_REGISTRY_IMAGE        # Push the image into registry
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+    - exit 1
+  allow_failure: true # Even if the job fails, continue to the next stages
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+  when: manual  # <-- this job will not be executed by GitLab automatically
+
+Save changes to the file using the Commit changes button.
+
+In the above code, you will notice that we use predefined variables provided by GitLab and we don’t need to manually define the image name.
+
+Once the pipeline is finished, you will notice that the release job failed with the error message denied: access forbidden. To fix this, we need to login into the registry with the correct credentials before pushing the image.
+
+The edited release job therefor looks like this 
+
+release:
+  stage: release
+  before_script:
+   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+   - docker build -t $CI_REGISTRY_IMAGE .  # Build the application into Docker image
+   - docker push $CI_REGISTRY_IMAGE        # Push the image into registry
+
+These variables need to be added by going to Project (django.nv) → Settings → CI/CD → Variables → Expand).
+
+PROD_USERNAME  =  root
+
+PROD_HOSTNAME = prod-p9v0d2l8
+
+PROD_SSH_PRIVKEY  = Copy the private key from the production machine using SSH
+
+Getting the Private key
+
+ssh root@prod-p9v0d2l8
+
+more /root/.ssh/id_rsa
+
+Prod can then be altered to fix auth issues
+
+prod:
+  stage: prod
+  image: kroniak/ssh-client:3.6
+  environment: production
+  only:
+      - main
+  before_script:
+   - mkdir -p ~/.ssh
+   - echo "$PROD_SSH_PRIVKEY" > ~/.ssh/id_rsa
+   - chmod 600 ~/.ssh/id_rsa
+   - eval "$(ssh-agent -s)"
+   - ssh-add ~/.ssh/id_rsa
+   - ssh-keyscan -t rsa $PROD_HOSTNAME >> ~/.ssh/known_hosts
+  script:
+   - echo
+   - |
+      ssh $PROD_USERNAME@$PROD_HOSTNAME << EOF
+        docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASS} ${CI_REGISTRY}
+        docker rm -f django.nv
+        docker run -d --name django.nv -p 8000:8000 $CI_REGISTRY_IMAGE
+      EOF
+
+
+
+
+
+FULL CICD PIPELINE WITH VARIABLES (NOT HARDCODED) 
+
+image: docker:20.10
+
+services:
+  - docker:dind
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py check
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+release:
+  stage: release
+  before_script:
+   - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+   - docker build -t $CI_REGISTRY_IMAGE .  # Build the application into Docker image
+   - docker push $CI_REGISTRY_IMAGE        # Push the image into registry
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+    - exit 1
+  allow_failure: true # Even if the job fails, continue to the next stages
+
+prod:
+  stage: prod
+  image: kroniak/ssh-client:3.6
+  environment: production
+  only:
+      - main
+  before_script:
+   - mkdir -p ~/.ssh
+   - echo "$PROD_SSH_PRIVKEY" > ~/.ssh/id_rsa
+   - chmod 600 ~/.ssh/id_rsa
+   - eval "$(ssh-agent -s)"
+   - ssh-add ~/.ssh/id_rsa
+   - ssh-keyscan -t rsa $PROD_HOSTNAME >> ~/.ssh/known_hosts
+  script:
+   - echo
+   - |
+      ssh $PROD_USERNAME@$PROD_HOSTNAME << EOF
+        docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+        docker rm -f django.nv
+        docker run -d --name django.nv -p 8000:8000 $CI_REGISTRY_IMAGE
+      EOF
