@@ -1,0 +1,85 @@
+Notes
+We need to share the project’s source code inside the container for it to access these files. We can do that using the -v option of the docker command.
+
+-v $(pwd):/src
+
+The above option mounts the current directory in the host (runner) to /src inside the container. This could also be -v /home/ubuntu/code:/src or c:\Users\student\code:/src if you were using windows.
+
+QUESTION 
+
+Embed OAST scanning in the test stage using the safety tool. Make sure you are using hysnsec/safety docker image for this task. Understand the use of Docker’s -v (volume mount) flag/option. Ensure you follow the DevSecOps Gospel and best practices while embedding the safety tool.
+
+
+test:
+  stage: test
+  script:
+    # We are going to pull the hysnsec/safety image to run the safety scanner
+    - docker pull hysnsec/safety
+    # third party components are stored in requirements.txt for python, so we will scan this particular file with safety.
+    - docker run --rm -v $(pwd):/src hysnsec/safety check -r requirements.txt --json > oast-results.json
+  artifacts:
+    paths: [oast-results.json]
+    when: always # What does this do?
+  allow_failure: true
+
+CICD with safety installed inside a container scanning a certain file while allowing for failure
+
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env                       # Create a virtual environment for the python application
+   - source env/bin/activate              # Activate the virtual environment
+   - pip install -r requirements.txt      # Install the required third party packages as defined in requirements.txt
+   - python manage.py check               # Run checks to ensure the application is working fine
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+oast:
+  stage: test
+  script:
+    # We are going to pull the hysnsec/safety image to run the safety scanner
+    - docker pull hysnsec/safety
+    # third party components are stored in requirements.txt for python, so we will scan this particular file with safety.
+    - docker run --rm -v $(pwd):/src hysnsec/safety check -r requirements.txt --json > oast-results.json
+  artifacts:
+    paths: [oast-results.json]
+    when: always # What does this do?
+  allow_failure: true
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+    - exit 1
+  allow_failure: true # Even if the job fails, continue to the next stages
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+  when: manual # Continuous Delivery
