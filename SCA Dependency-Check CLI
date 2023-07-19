@@ -1,0 +1,35 @@
+Download the source code
+
+git clone https://github.com/WebGoat/WebGoat.git webapp
+
+Before installing Dependency-Check, we need to ensure if java is installed in our system.
+
+java -h
+
+It seems Java is not installed, so we need to install Java. Let’s update apt first.
+
+apt update
+
+Now, let’s install Java.
+
+apt install openjdk-8-jre -y
+
+Next, we need to download Dependency Check source code.
+
+wget -O /opt/v6.1.6.zip https://github.com/jeremylong/DependencyCheck/releases/download/v6.1.6/dependency-check-6.1.6-release.zip
+
+Extract the source code.
+
+unzip /opt/v6.1.6.zip -d /opt/
+
+We will add the tool to the PATH, so we can refer it on the command line.
+
+export PATH=/opt/dependency-check/bin:$PATH
+
+Let’s explore what options this tool provides us.
+
+dependency-check.sh -h
+
+Perform the scan on the webgoat source code directory using the following command.
+
+dependency-check.sh --scan /webapp --format "CSV" --project "Webgoat" --failOnCVSS 8 --out /opt
