@@ -1,0 +1,70 @@
+This tool looks great, however it is far from perfect.
+
+Here’s why.
+
+Pre-commit/Pre-push hooks are configured only on a developer’s workstation.
+If a developer has administrator access, he/she can easily disable these checks.
+There’s no way to enforce it across the organization.
+
+We will do all the exercises locally in DevSecOps-Box, and before installing the tool, we need to understand what is a git hook.
+
+There are two types of git hooks supported by Talisman.
+
+pre-commit
+pre-push
+In this exercise, we will use pre-commit hook to prevent our developers from adding a sensitive file to our git repository.
+
+You can install Talisman with the pre-commit hook, using the following command.
+
+curl --silent https://raw.githubusercontent.com/thoughtworks/talisman/master/global_install_scripts/install.bash > /tmp/install_talisman.bash && /bin/bash /tmp/install_talisman.bash pre-commit
+
+Or you can add pre-push as an argument to use the pre-push hook.
+
+curl --silent https://raw.githubusercontent.com/thoughtworks/talisman/master/global_install_scripts/install.bash > /tmp/install_talisman.bash && /bin/bash /tmp/install_talisman.bash pre-push
+
+Next, let’s clone our code from Gitlab.
+
+git clone http://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv.git webapp
+
+Let’s cd into the application so we can scan the app.
+
+cd webapp
+
+We are now in the webapp directory.
+
+To see Talisman in action, we will try to add a sensitive file to this repository.
+
+Let’s copy SSH Private Key into the current directory.
+
+cp ~/.ssh/id_rsa .
+
+git add id_rsa
+
+git commit -m "Add private key"
+
+The above error appears because we haven’t added any git identity on the system. Let’s follow the provided suggestions to configure the git.
+
+git config --global user.email "student@pdevsecops.com"
+
+git config --global user.name "DevSecOps Student"
+
+As expected, Talisman found a sensitive file (SSH private key) and stopped the file from being committed in to the repo. You can review supported rules and other configurations here.
+
+You can also use Talisman as a command-line utility instead of using it as a git hook.
+
+Let’s explore what options Talisman provides us.
+
+talisman -h
+
+What? We just installed it.
+
+Oh, that’s right, we haven’t sourced the changes to the current bash environment.
+
+source ~/.bashrc
+
+Let’s run the scanner to find any secrets in our code.
+
+talisman --scan
+
+By default, Talisman outputs the results in the JSON format. You can check out the result file at talisman_reports/data/report.json,
+
