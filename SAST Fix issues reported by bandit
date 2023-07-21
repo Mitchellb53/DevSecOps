@@ -1,0 +1,38 @@
+Download the source code
+We will do all the exercises locally first in DevSecOps-Box, so let’s start the exercise.
+
+First, we need to download the source code of the project from our git repository.
+
+git clone https://gitlab.practical-devsecops.training/pdso/dvpa-api webapp
+
+Let’s cd into the application so we can scan the app.
+
+cd webapp
+
+Let’s install the bandit scanner on the system to perform static analysis.
+
+pip3 install bandit==1.7.4
+
+Let’s scan our source code by executing the following command:
+
+bandit -r .
+
+Fixing Insecure Deserialization
+Python yaml library has a known vulnerability around YAML deserialization. We can search for this known security issue on the CVE website.
+
+For more details, please visit CVE-2020-1747. As mentioned before, our code is vulnerable to Deserialization Attacks.
+
+If you recall, one of the findings in the previous step was unsafe YAML load, and the following was the code snippet for the same.
+
+Let’s verify this issue exists by opening up the flaskblog/blogapi/dashboard.py file using any text editor like vim or nano. Ensure the security issue exists at line 248 and the program uses the insecure yaml.load function. To fix this issue, we need to replace yaml.load with a safe alternative yaml.safe_load.
+
+Fixing SQL Injection
+Bandit also informed us that there are 7 possible SQL Injection issues in this application. We can fix these issues in various ways, but the best way to fix SQL Injection issues is Parameterized queries, also known as Parameter Binding.
+
+First, we will try to fix the SQL Injection issue present in the flaskblog/auth.py file at line number 14. As you can see in the following code snippet, there is a SQL injection issue in the check_auth function.
+
+The cur.execute function call will execute the SQL query on the database. It takes the username and password as possible inputs to the SQL query.
+
+You can replace line number 14 with the following code. This code will fix the SQL Injection issue.
+
+cur.execute(f"SELECT * FROM users WHERE email=%s AND password=%s", [username, hashsed_password ])
