@@ -1,0 +1,24 @@
+First, we need to download the source code of the project from our git repository.
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+Let’s cd into the application so we can scan the app.
+
+cd webapp
+
+Let’s install the bandit scanner on the system to perform static analysis.
+
+pip3 install bandit==1.7.4
+
+We have successfully installed Bandit scanner. Let’s explore the functionality it provides us.
+
+bandit --help
+
+As we have learned in the DevSecOps Gospel, we would like to store the tool results in a JSON file. We are using the tee command here to show the output and store it in a file simultaneously.
+
+bandit -r . -f json | tee bandit-output.json
+
+Bandit ran successfully, and it found three security issues.
+1. One high severity issue
+2. One medium severity issue
+3. One low severity issue
