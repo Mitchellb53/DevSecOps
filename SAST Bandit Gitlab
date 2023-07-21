@@ -1,1 +1,70 @@
 
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env                       # Create a virtual environment for the python application
+   - source env/bin/activate              # Activate the virtual environment
+   - pip install -r requirements.txt      # Install the required third party packages as defined in requirements.txt
+   - python manage.py check               # Run checks to ensure the application is working fine
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+sast:
+  stage: build  # we moved this job from test stage to build stage, by replacing the text test to build
+  script:
+    # Download bandit docker container
+    - docker pull hysnsec/bandit
+    # Run docker container, please refer docker security course, if this doesn't make sense to you.
+    - docker run --user $(id -u):$(id -g) -v $(pwd):/src --rm hysnsec/bandit -r /src -f json -o /src/bandit-output.json
+  artifacts:
+    paths: [bandit-output.json]
+    when: always
+  allow_failure: true
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+    - exit 1
+  allow_failure: true # Even if the job fails, continue to the next stages
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+  when: manual # Continuous Delivery
+
+
+Notes
+The above option mounts the current directory in the host (runner) to /src inside the container. This could also be -v /home/ubuntu/code:/src or c:\users\code:/src if you were using windows.
+
+Instead of manually removing the container after the scan, we can use --rm option so docker can clean up after itself.
+
+What is this --user option here, and why are we using it? Can you please try removing this option --user $(id -u):$(id -g) and see what would happen?
+
+For more details please refer to https://medium.com/redbubble/running-a-docker-container-as-a-non-root-user-7d2e00f8ee15
