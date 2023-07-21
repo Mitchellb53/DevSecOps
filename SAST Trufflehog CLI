@@ -1,0 +1,16 @@
+Let’s install the TruffleHog tool on the system to scan for the secrets in our code.
+
+wget https://github.com/trufflesecurity/trufflehog/releases/download/v3.28.0/trufflehog_3.28.0_linux_amd64.tar.gz
+tar -xvf trufflehog_3.28.0_linux_amd64.tar.gz
+chmod +x trufflehog
+mv trufflehog /usr/local/bin/
+
+Let’s explore what options Trufflehog provides us.
+
+trufflehog --help
+
+Let’s run the scan on the django.nv project.
+
+trufflehog git https://gitlab.practical-devsecops.training/pdso/django.nv --json | tee secret.json
+
+--json: tells that output should be in the JSON format
