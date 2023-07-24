@@ -1,0 +1,38 @@
+Download the source code
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+cd webapp
+
+Let’s install the Semgrep tool on the system to perform static analysis.
+
+pip3 install semgrep==1.30.0
+
+The tool has four categories of parameters.
+
+Category	Description
+positional arguments	The target of file or directory that we want to scan
+optional arguments	Many optional arguments like include/exclude file/dir to scan
+config	Configuration to scan the code
+output	The result output
+For example, we will scan the source code of webapp to see all the os.system calls in the program.
+
+semgrep --lang python -e "os.system(...)" .
+
+--lang is the parameter to set which programming language that we want to scan.
+-e is the parameter to set the pattern for code search pattern, see the details here.
+webapp is a target directory where the source code is located.
+
+And also, we can set the output result into a JSON file.
+
+semgrep --lang python -e "os.system(...)" . --json | jq
+
+We can specify a file or directory that we want to scan by providing --include argument.
+
+semgrep --lang python -e "DEBUG =True" --include settings.py .
+
+Scan all declarations of variables in webapp source code
+
+semgrep --lang python -e '$X = $Y' .
+
+Scan all function calls that have request as an argument
