@@ -1,0 +1,62 @@
+Install DAST Tool
+
+Let’s install SSlyze to perform Dynamic analysis.
+
+pip3 install sslyze==5.0.3
+
+We have successfully installed SSLyze scanner, let’s explore the functionality it provides us.
+
+sslyze --help
+
+Run the Scanner
+As we have learned in the DevSecOps Gospel we should save the output in the machine-readable format so that It can be parsed by the computers easily.
+
+Let’s run sslyze with the following options.
+
+sslyze --json_out sslyze-output.json prod-p9v0d2l8.lab.practical-devsecops.training:443
+
+Note, we are using the target as prod-p9v0d2l8.lab.practical-devsecops.training:443
+
+--json_out flag is used to store the output in a json format.
+
+We can check the scan output using the following command.
+
+cat sslyze-output.json
+
+...[SNIP]...
+
+                "tls_1_3_early_data": {
+                    "error_reason": null,
+                    "error_trace": null,
+                    "result": null,
+                    "status": "NOT_SCHEDULED"
+                },
+                "tls_compression": {
+                    "error_reason": null,
+                    "error_trace": null,
+                    "result": {
+                        "supports_compression": false
+                    },
+                    "status": "COMPLETED"
+                },
+                "tls_fallback_scsv": {
+                    "error_reason": null,
+                    "error_trace": null,
+                    "result": null,
+                    "status": "NOT_SCHEDULED"
+                }
+            },
+            "scan_status": "COMPLETED",
+            "server_location": {
+                "connection_type": "DIRECT",
+                "hostname": "prod-p9v0d2l8.lab.practical-devsecops.training",
+                "http_proxy_settings": null,
+                "ip_address": "x.x.x.x",
+                "port": 443
+            },
+            "uuid": "6038d51f-31e1-4c43-bd7a-bbbe2b032342"
+        }
+    ],
+    "sslyze_url": "https://github.com/nabla-c0d3/sslyze",
+    "sslyze_version": "5.0.3"
+In the next exercise, we will integrate sslyze into the CI/CD pipeline.
