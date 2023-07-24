@@ -1,0 +1,98 @@
+Download the source code
+
+git clone https://gitlab.practical-devsecops.training/pdso/dvpa-api
+
+cd dvpa-api
+
+Install Bandit
+
+pip3 install bandit==1.7.4
+
+Let’s scan our source code by executing the following command:
+
+bandit -r .
+
+There are two ways to do the False Positive Analysis. Either by reading the source code or by exploiting the vulnerability. In this exercise, we only cover the first way.
+
+As per Bandit’s scan results, we have hardcoded password strings, an insecure hash function issue, an insecure deserialization issue, and SQL injection vulnerability.
+
+Let’s try to analyze if they are real issues or false positives. We will try to explore the following three issues among them.
+
+>> Issue: [B303:blacklist] Use of insecure MD2, MD4, MD5, or SHA1 hash function.
+   Severity: Medium   Confidence: High
+   CWE: CWE-327 (https://cwe.mitre.org/data/definitions/327.html)
+   Location: ./flaskblog/auth.py:13:23
+   More Info: https://bandit.readthedocs.io/en/1.7.4/blacklists/blacklist_calls.html#b303-md5
+12          cur = db.connection.cursor()
+13          hashsed_password = hashlib.md5(password.encode()).hexdigest()
+14          cur.execute(f"SELECT * FROM users WHERE email='{username}' AND password='{hashsed_password}'")
+
+--------------------------------------------------
+>> Issue: [B608:hardcoded_sql_expressions] Possible SQL injection vector through string-based query construction.
+   Severity: Medium   Confidence: Medium
+   CWE: CWE-89 (https://cwe.mitre.org/data/definitions/89.html)
+   Location: ./flaskblog/auth.py:14:16
+   More Info: https://bandit.readthedocs.io/en/1.7.4/plugins/b608_hardcoded_sql_expressions.html
+13          hashsed_password = hashlib.md5(password.encode()).hexdigest()
+14          cur.execute(f"SELECT * FROM users WHERE email='{username}' AND password='{hashsed_password}'")
+15          user = cur.fetchone()
+
+...[SNIP]...
+
+Let’s explore the first issue now.
+
+99              cur = db.connection.cursor()
+100             cur.execute(f"UPDATE `users` SET `email` = '{email}', `full_name` = '{full_name}', `phone_number` = '{phone_number}', `dob` = '{dob}' WHERE `users`.`id` = {request.args.get('uid')}")
+101             db.connection.commit()
+It looks like the above code is vulnerable to SQL Injection because uid is used in the query directly, so it’s not a False Positive.
+
+Next, lets check out the second result.
+
+132             cur.execute(
+133                 f"INSERT INTO posts (`body`, `slug`, `author`, `title`) VALUES (%s, %s, %s, %s)",
+134                 [body, slug, claim.get("id"), title])
+The above code is definitely False Positive as we are using Parameter Binding to create the query.
+
+And the last one is a known vulnerability in Python’s YAML library called YAML deserialization. We can search for this known security issue on the CVE website.
+
+247                 elif export_format == "yaml":
+248                     import_post_data = yaml.load(import_data)
+249
+For more details about this issue, please visit CVE-2020-1747.
+
+As mentioned before, our code is vulnerable to Deserialization Attacks and we can mark this as not a False Positive.
+
+
+The baseline file contains issues you would want to mark as False Positives.
+
+This is useful for ignoring known vulnerabilities that you believe are non-issues (e.g. a cleartext password in a unit test).
+
+Note
+
+It’s similar to .retireignore.json, brakeman.ignore etc., files we have seen in other labs.
+
+In layman terms, the issues you want to mark as False Positives, you will add it to this file. The real issues should not be present in this file.
+
+In order to work with baseline feature, you need to generate the baseline.json file using the below command.
+
+bandit -r . -f json | tee baseline.json
+
+Open the baseline.json file in any text editor of your choice and go to the end of the baseline.json file.
+
+Remove the issues that are NOT false positives from this file and keep the issues that are false positives in it.
+
+Remember we saved the output of the bandit as baseline.json hence all the issues found by Bandit in the previous scan are a part of the baseline.json file. If we do not modify the baseline.json file, and use the baseline.json file as is, then all the issues reported by bandit would be marked as False Positives.
+
+When supplying the baseline.json file, bandit will not report the issues present in the baseline.json file in the subsequent scans.
+
+You can mark the following issue as False positive. How would you do it?
+
+Note
+
+Remove everything else from the issue list and keep the following issue in the baseline.json file or you can follow the example from this snippet.
+
+Remember!
+
+While editing the baseline file, please do not change the metrics and other details in the file__
+
+In short baseline.json will be the file, where you will store/mark issues as false positives.
