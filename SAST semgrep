@@ -36,3 +36,81 @@ Scan all declarations of variables in webapp source code
 semgrep --lang python -e '$X = $Y' .
 
 Scan all function calls that have request as an argument
+
+
+Cross-Site Request Forgery (CSRF)
+Django applications would be vulnerable to CSRF attack if we’re using csrf_exempt decorator or django.middleware.csrf.CsrfViewMiddleware middleware is not set in MIDDLEWARE_CLASSES, we can use Semgrep to find those things to mitigate the CSRF vulnerability.
+
+cat > csrf_hunting.yaml <<EOF
+rules:
+- id: possible-csrf
+  patterns:
+  - pattern-inside: | 
+      @csrf_exempt
+      def \$FUNC(\$X):
+          ...
+  message: |
+    Possible CSRF
+  languages:
+  - python
+  severity: WARNING
+
+- id: no-csrf-middleware
+  patterns:
+  - pattern: MIDDLEWARE_CLASSES=(...)
+  - pattern-not: MIDDLEWARE_CLASSES=(...,'django.middleware.csrf.CsrfViewMiddleware',...)
+  message: |
+    No CSRF middleware
+  languages:
+  - python
+  severity: WARNING
+EOF
+There are 2 rules in YAML file.
+
+possible-csrf: Find all function definitions that use @csrf_exempt as decorator
+no-csrf-middleware: Search the string MIDDLEWARE_CLASSES and see if doesn’t have ‘django.middleware.csrf.CsrfViewMiddleware’ on it
+Run Semgrep with our rules against the source code.
+
+semgrep -f csrf_hunting.yaml .
+
+
+Let’s create a rule to hunt misconfigurations in our application e.g., availability of DEBUG=True flag in settings.py file.
+
+cat > debug_enable.yaml <<EOF 
+rules:
+- id: debug-enabled
+  patterns:
+  - pattern: DEBUG=True
+  message: |
+    Detected Django app with DEBUG=True. Do not deploy to production with this flag enabled
+    as it will leak sensitive information.
+  metadata:
+    cwe: 'CWE-489: Active Debug Code'
+    owasp: 'A6: Security Misconfiguration'
+    references:
+    - https://blog.scrt.ch/2018/08/24/remote-code-execution-on-a-facebook-server/
+  severity: WARNING
+  languages:
+  - python
+EOF
+Run Semgrep with our rules in the source code.
+
+semgrep -f debug_enable.yaml .
+
+
+
+semgrep rule to detect Insecure Redirect in the following code snippet
+
+
+cat > insecure_redirect.yaml <<EOF
+rules:
+- id: CWE-601
+  pattern: |
+    return redirect(request.\$M.get(...))
+  message: Insecure Redirect
+  severity: WARNING
+  languages:
+  - python
+EOF
+
+semgrep -f insecure_redirect.yaml
