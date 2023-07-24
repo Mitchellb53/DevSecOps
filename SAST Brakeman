@@ -1,0 +1,55 @@
+Download the source code
+
+git clone https://gitlab.practical-devsecops.training/pdso/rails.git webapp
+
+Let’s cd into the application so we can scan the app.
+
+cd webapp
+
+Install Brakeman
+
+Basically, our system doesn’t have Ruby installed, let’s update apt first.
+
+apt update
+
+Then, let’s install Ruby with the following command.
+
+apt install ruby-full -y
+
+Let’s install the Brakeman tool to perform static analysis.
+
+gem install brakeman -v 5.2.1
+
+We have successfully installed Brakeman, let’s explore the functionality it provides us.
+
+brakeman -h
+
+Run the Scanner
+As we have learned in DevSecOps Gospel, we would like to store the content in a JSON file. We are using the tee command here to show the output and store it in a file simultaneously.
+
+brakeman -f json | tee result.json
+
+Brakeman ran successfully, and it found 19 security issues.
+
+Six issues with confidence level Medium
+Eleven issues with confidence level High
+It seems we have found quite a few issues; you can ignore issues with using the brakeman.ignore file.
+
+You will find fingerprints in the scan output.
+
+create this brakeman.ignore file.
+
+cat > brakeman.ignore <<EOF
+{
+    "ignored_warnings": [
+        {
+          "fingerprint": "febb21e45b226bb6bcdc23031091394a3ed80c76357f66b1f348844a7626f4df",
+          "note": "ignore XSS"
+        }
+    ]
+}
+EOF
+
+Let’s re-run the scanner.
+
+brakeman -f json -i brakeman.ignore | tee result.json
