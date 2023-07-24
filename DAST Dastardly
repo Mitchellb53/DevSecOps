@@ -1,0 +1,20 @@
+Dastardly
+Dastardly is an open-source lightweight web application security scanner that can be used as a Dynamic Application Security Testing tool. It can be easily integrated into your CI/CD system to find vulnerabilities in your software applications.
+
+Source: Dastardly, from Burp Suite
+
+In the previous exercise, we learned how to use ZAP using a Baseline scan to find security issues. In this exercise, we will use Dastardly to perform Dynamic Application Security Testing (DAST) in our target machine (prod). Once you get the results from Dastardly you can compare the results with the ZAP results and make a decision about which tools better fit your requirements.
+
+First, we need to pull Dastardly’s docker image.
+
+docker pull public.ecr.aws/portswigger/dastardly
+
+Then, let’s run Dastardly scan with the following command.
+
+docker run --user $(id -u) --rm -v $(pwd):/dastardly -e DASTARDLY_TARGET_URL=https://prod-p9v0d2l8.lab.practical-devsecops.training -e DASTARDLY_OUTPUT_FILE=/dastardly/dastardly-report.xml public.ecr.aws/portswigger/dastardly
+
+The output is present in XML format and the file is in the current directory. You can verify the existence of the output file with ls -l command.
+
+To read the output easily, we suggest you to use this website and copy paste the output into it.
+
+https://portswigger.net/burp/documentation/dastardly
