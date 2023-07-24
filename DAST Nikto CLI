@@ -1,0 +1,70 @@
+Install Nikto
+
+Nikto is a web server assessment tool. It’s designed to find various default and insecure files, configurations, and programs on any type of web server.
+
+Nikto is built on LibWhisker2 (by RFP) and can run on any platform which has a Perl environment. It supports SSL, proxies, host authentication, attack encoding, and more.
+
+Source: Nikto official.
+
+Let’s install Nikto to perform Dynamic Analysis.
+
+apt install -y libnet-ssleay-perl
+
+The above command is needed to support SSL scan in Nikto
+
+git clone https://github.com/sullo/nikto
+
+cd nikto/program
+
+We have successfully installed the Nikto scanner. Let’s explore the functionality it provides us.
+
+./nikto.pl -Help
+
+Run the Scanner
+As we have learned in the DevSecOps Gospel, we should save the output in the machine-readable format (CSV, JSON, XML) so it can be parsed by the machines easily.
+
+Let’s run the Nikto with the following options.
+
+./nikto.pl -output nikto_output.xml -h prod-p9v0d2l8
+
+-h: flag used to set the target application which we want to scan
+-output: flag used to set the output file in which we want to store the result
+
+Now, executing cat command on the output file will show the nikto result in XML format.
+
+cat nikto_output.xml
+
+List available plugins and run the headers plugin to perform a scan against prod-p9v0d2l8 in Nikto
+
+Hint
+To perform the list of plugin in nikto.
+
+./nikto.pl -list-plugins
+Then, we can do scanning only in headers plugin.
+
+./nikto.pl -h prod-p9v0d2l8 -Plugins headers
+
+List available plugins and run the headers plugin to perform a scan against prod-p9v0d2l8 in Nikto
+
+Hint
+To perform the list of plugin in nikto.
+
+./nikto.pl -list-plugins
+Then, we can do scanning only in headers plugin.
+
+./nikto.pl -h prod-p9v0d2l8 -Plugins headers
+
+Configure Nikto (nikto.conf) in /nikto/program/ directory to remove the ports that would never be scanned and save output to CSV format
+
+Hint
+Note
+
+Imagine we have a valid use case for not scanning ports 21, 22, and 111, because those ports are required, and the servers running in those ports are adequately secured, we can instruct Nikto to ignore scanning the ports 21, 22, and 111 using SKIPPORTS option.
+
+cat >/nikto/program/nikto.conf<<EOF
+SKIPPORTS=21 22 111
+CLIOPTS=-output result.csv -Format csv
+EOF
+Re-run the nikto command.
+
+./nikto.pl -h prod-p9v0d2l8 -config nikto.conf
