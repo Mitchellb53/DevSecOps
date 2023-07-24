@@ -1,0 +1,22 @@
+Install DAST Tool
+
+Let’s install nmap to perform Dynamic Analysis.
+
+apt-get update && apt-get install nmap -y 
+
+We have successfully installed Nmap scanner, let’s explore the functionality it provides us.
+
+nmap -help
+
+Run the Scanner
+As we have learned in the DevSecOps Gospel, we should save the output in the machine-readable format so that it can be parsed by the computers easily.
+
+Let’s run nmap with the following options.
+
+nmap prod-p9v0d2l8 -oX nmap_out.xml
+
+-oX: flag used to tells the tool that the output should be saved in XML format
+
+We can check the scan output using the following command
+
+cat nmap_out.xml
