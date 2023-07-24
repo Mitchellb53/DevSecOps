@@ -1,0 +1,60 @@
+In this exercise, we will use nuclei scanner to find security issues passively.
+
+Before that, let’s install nuclei binary from source.
+
+wget https://github.com/projectdiscovery/nuclei/releases/download/v2.9.6/nuclei_2.9.6_linux_amd64.zip
+unzip nuclei_2.9.6_linux_amd64.zip
+mv nuclei /usr/local/bin/nuclei
+Let’s see the usage of nuclei Scan.
+
+nuclei --help
+
+Run the Scanner
+As we have learned in the DevSecOps Gospel, we should save the output in the machine-readable format like JSON, CSV or XML.
+
+Let’s run nuclei with basic options.
+
+nuclei -u https://prod-p9v0d2l8.lab.practical-devsecops.training
+
+If you want the output in JSON format, you can use the -j option to convert to JSON format and -o to save it to a file.
+
+nuclei -u https://prod-p9v0d2l8.lab.practical-devsecops.training -j -o nuclei-output.json
+
+The nuclei-output.json file is in the current directory.
+
+You can verify the existence of the output file with ls -l command.
+
+If you want to check the arranged output in nuclei-output.json, we can use the following command.
+
+cat nuclei-output.json | jq
+
+Run Nuclei using Docker
+In this step we want to run nuclei scanner using Docker. Why?
+
+By using Docker, it will be easier for us to run the program without installing the binary on our local system. This method is effective, especially if we want to run nuclei in the CI/CD pipeline, making the process work efficiently without having to install the nuclei binary.
+
+First, we can pull the docker image.
+
+docker pull projectdiscovery/nuclei:v2.9.6
+
+Next, let’s initiate command to run nuclei command from docker.
+
+In this scenario, we will run with the json output file.
+
+Before that we should remove previous nuclei-output.json and make sure the file is already removed before we generate new nuclei-output.json file.
+
+rm nuclei-output.json && ls
+
+Let’s run the nuclei docker command.
+
+docker run --user $(id -u):$(id -g) -w /nuclei -v $(pwd):/nuclei:rw --rm projectdiscovery/nuclei:v2.9.6 -u https://prod-p9v0d2l8.lab.practical-devsecops.training -j -o nuclei-output.json
+
+The nuclei-output.json file is recreated in the current directory. You can verify the existence of the output file with ls -l command.
+
+Let’s check the result.
+
+cat nuclei-output.json | jq
+
+We can summarize that using both binary and Docker yields similar results. However, the most effective method depends on the specific scenario. For instance, running nuclei in Docker can help reduce the installation process, making it more efficient in certain situations.
+
+In the next exercise, we will integrate nuclei into the CI/CD pipeline.
