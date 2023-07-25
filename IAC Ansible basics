@@ -1,0 +1,210 @@
+Install Ansible
+
+pip3 install ansible==6.4.0
+
+Create the inventory file
+We will learn Ansible basics by performing our experiments on these two machines. Let’s create the inventory or CMDB file for Ansible using the following command.
+
+cat > inventory.ini <<EOL
+
+# DevSecOps Studio Inventory
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[sandbox]
+sandbox-p9v0d2l8
+
+EOL
+
+As Ansible uses SSH as its RPC mechanism, we will have to ensure the SSH’s yes/no prompt doesn’t wait for our input indefinitely while running the Ansible commands. 
+
+To overcome this, we will be using the ssh-keyscan command to capture the key signatures beforehand.
+
+ssh-keyscan -t rsa devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Let’s do this for the rest of the systems in this lab as well.
+
+ssh-keyscan -t rsa sandbox-p9v0d2l8 >> ~/.ssh/known_hosts
+
+ssh-keyscan -t rsa sandbox-p9v0d2l8 devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Create the playbook
+Playbooks are a collection of Ansible tasks, you can run a playbook against a local or a remote machine. They help us in configuring machine(s) according to the requirements. Ansible uses the YAML format to declare the configurations.
+
+Playbooks follow a directory layout. A sample playbook directory structure is shown below:
+
+tasks/              # task files included from playbooks
+    01-install.yml  # task file to install something
+    02-config.yml   # task file to copy configuration to remote machine
+    main.yml        # master task playbook
+roles/
+    common/         # this hierarchy represents a "role"
+vars/
+    main.yml        # vars file to save variables
+main.yml            # master playbook
+
+We will create a simple playbook that will execute tasks like installing, configuring Nginx, and setting up the Django application on the sandbox machine.
+
+Let’s create a directory to store our playbook.
+
+mkdir simple-playbook && cd simple-playbook
+
+Create the tasks directory to store tasks.
+
+mkdir tasks
+
+Next, we will create a file called main.yml that stores the needed tasks.
+
+cat > tasks/main.yml <<EOL
+---
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Copy the configuration
+  template:
+    src: templates/default.j2
+    dest: /etc/nginx/sites-enabled/default
+
+- name: Start nginx service
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Clone django repository
+  git:
+    repo: https://gitlab.practical-devsecops.training/pdso/django.nv.git
+    dest: /opt/django
+
+- name: Install dependencies
+  command: pip3 install -r requirements.txt
+  args:
+    chdir: /opt/django
+
+- name: Database migration
+  command: python3 manage.py migrate
+  args:
+    chdir: /opt/django
+
+- name: Load data from the fixtures
+  shell: python3 manage.py loaddata fixtures/*
+  args:
+    chdir: /opt/django
+
+- name: Run an application in the background
+  shell: nohup python3 manage.py runserver 0.0.0.0:8000 &
+  args:
+    chdir: /opt/django
+EOL
+Then, we will create a templates directory to save our configuration file.
+
+mkdir templates
+
+We will create a default.j2 template file. This file gets copied to the remote machine to adjust the template variables according to the requirements.
+
+cat > templates/default.j2 <<EOL
+{% raw %}
+server {
+    listen      80;
+    server_name localhost;
+
+    access_log  /var/log/nginx/django_access.log;
+    error_log   /var/log/nginx/django_error.log;
+
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+
+    location / {
+        proxy_pass  http://localhost:8000;
+        proxy_next_upstream error timeout invalid_header http_500 http_502 http_503 http_504;
+        proxy_redirect off;
+
+        proxy_set_header    Host \$host;
+        proxy_set_header    X-Real-IP \$remote_addr;
+        proxy_set_header    X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto http;
+    }
+}
+{% endraw %}
+EOL
+Let’s create a main.yml playbook file that uses the main.yml under the tasks folder.
+
+cat > main.yml <<EOL
+---
+- name: Simple playbook
+  hosts: sandbox
+  remote_user: root
+  gather_facts: no
+
+  tasks:
+  - include: tasks/main.yml
+EOL
+So far, we have created two directories and three files. We can check out our current directory layout using the tree command.
+
+tree
+
+simple-playbook# tree
+.
+├── main.yml
+├── tasks
+│   └── main.yml
+└── templates
+    └── default.j2
+
+2 directories, 3 files
+
+
+Let’s run our playbook using the following command.
+
+ansible-playbook -i inventory.ini main.yml
+
+Oops, why our playbook didn’t execute? Can you look at the output and figure out why?
+
+It’s simple! Ansible couldn’t find the inventory.ini file. This file is needed to marry the host groups and individual machines in it. Let’s move the inventory.ini file we created before to our current directory.
+
+mv ../inventory.ini .
+
+Try running the above ansible command once again.
+
+ansible-playbook -i inventory.ini main.yml
+Once the Ansible playbook finishes, you will notice that the output has changed=8.
+
+The changed=8 specifics that ansible made 8 changes to the system. What would it mean if changed=0? It would mean there were no changes. Since we ran about 8 tasks, we can assume each task made a change to the system, and we got our changed=8 as the output.
+
+
+Let’s verify if nginx was installed, started, and properly deployed. We will use SSH to log into the sandbox machine.
+
+ssh sandbox-p9v0d2l8
+
+Check if nginx is installed or not.
+
+which nginx
+
+/usr/sbin/nginx
+Looks good. Next, let’s list all listening ports to check nginx (port 80) and django (port 8000) are being used.
+
+netstat -tlpn
+
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name    
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      955/sshd: /usr/sbin 
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN      4005/nginx: master  
+tcp        0      0 127.0.0.11:44613        0.0.0.0:*               LISTEN      -                   
+tcp        0      0 0.0.0.0:8000            0.0.0.0:*               LISTEN      4148/python3        
+tcp        0      0 127.0.0.53:53           0.0.0.0:*               LISTEN      835/systemd-resolve 
+tcp6       0      0 :::2375                 :::*                    LISTEN      976/dockerd
+Perfect, we see port 80 is being used by nginx and 8000 by Django application.
+
+Lets exit from the sandbox machine and head over to the DevSecOps-Box.
+
+exit
+
+Now, let’s verify our Django application is indeed serving the requests using the curl command.
+
+curl sandbox-p9v0d2l8
+
+
+
