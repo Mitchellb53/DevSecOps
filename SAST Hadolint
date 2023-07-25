@@ -1,0 +1,68 @@
+Download the source code
+
+git clone https://gitlab.practical-devsecops.training/pdso/django.nv webapp
+
+cd webapp
+
+Let’s install the Hadolint tool on the system to perform static analysis of Dockerfiles.
+
+wget https://github.com/hadolint/hadolint/releases/download/v1.18.0/hadolint-Linux-x86_64
+
+Let’s rename this file to make it easy for us to type it.
+
+mv hadolint-Linux-x86_64 hadolint
+
+In order to run this tool, you need to give it executable permissions using the following command
+
+chmod +x hadolint
+
+We have successfully installed hadolint scanner, let’s explore the functionality it provides us.
+
+./hadolint --help
+
+Run the Hadolint on Dockerfile
+
+./hadolint Dockerfile
+
+Hadolint ran successfully, and it found one issue i.e., we are not following the best practices for Dockerfile.
+
+To fix this, you need to edit Dockerfile and add a specific version of the package.
+
+Let’s check the contents of the Dockerfile using the cat command.
+
+cat -n Dockerfile
+
+As per the Hadolint finding Dockerfile:9 DL3018 Pin versions in apk add., the Dockerfile line number 9 has a problem.
+
+So let’s fix it.
+
+From
+
+     9  RUN apk add --no-cache gawk sed bash grep bc coreutils
+To
+
+     9  RUN apk add --no-cache gawk=5.0.1-r0 sed=4.7-r0 bash=5.0.11-r1 grep=3.3-r0 bc=1.07.1-r1 coreutils=8.31-r0
+Let’s edit the Dockerfile to add these changes.
+
+cat > Dockerfile <<EOL
+# FROM python base image
+FROM python:3-alpine3.15
+
+# COPY startup script
+COPY . /app
+
+WORKDIR /app
+
+RUN apk add --no-cache gawk=5.0.1-r0 sed=4.7-r0 bash=5.0.11-r1 grep=3.3-r0 bc=1.07.1-r1 coreutils=8.31-r0
+RUN pip install -r requirements.txt
+RUN chmod +x reset_db.sh && bash reset_db.sh
+
+# EXPOSE port 8000 for communication to/from server
+EXPOSE 8000
+
+# CMD specifcies the command to execute container starts running.
+CMD ["/app/run_app_docker.sh"]
+EOL
+It’s time to run the Hadolint scan once again.
+
+./hadolint Dockerfile
