@@ -1,0 +1,115 @@
+Install Ansible
+
+pip3 install ansible==6.4.0
+
+Inventory file
+
+Inventory is a file to define a list of hosts that can be sorted as groups, it provides ability to store and manage some variables. The inventory can be created as INI or YAML, but the most common format is INI and might look like this:
+
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[sandbox]
+sandbox-p9v0d2l8
+
+[prod]
+prod-p9v0d2l8
+
+
+The headings in the bracket are a group name that used to defines our hosts. So let’s create the inventory file for Ansible using the following command.
+
+cat > inventory.ini <<EOL
+
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[sandbox]
+sandbox-p9v0d2l8
+
+[prod]
+prod-p9v0d2l8
+
+EOL
+
+To see which hosts in our inventory matches a supplied group name, let’s try the following command.
+
+ansible -i inventory.ini prod --list-hosts
+
+  hosts (1):
+    prod-p9v0d2l8
+
+You can change the prod value to another group name like sandbox or devsecops to see if there is a host match. In case there is no host match, the output looks like below for a group named gitlab that does not exist in our inventory file.
+
+ansible -i inventory.ini gitlab --list-hosts
+
+Ansible Configuration file
+Ansible also can be customized by modifying the ansible configuration called ansible.cfg. You can see if there is any default configuration through the following command:
+
+ansible --version
+
+config file is None, if you’re using CentOS, you will find out there is a config file at /etc/ansible/ansible.cfg by default.
+
+Because we don’t have an ansible.cfg in our machine, we can create it manually by doing:
+
+mkdir /etc/ansible/
+
+cat > /etc/ansible/ansible.cfg <<EOF
+[defaults]
+stdout_callback = yaml
+deprecation_warnings = False
+host_key_checking = False
+retry_files_enabled = False
+inventory = /inventory.ini
+EOF
+
+Then, type ansible --version command once again, you will see the value now reflects the config file that we created before.
+
+
+With the config file, you can define any settings like inventory default location or output formats when Ansible finishes a certain command or a playbook. If you want to see further details about the config, you can check out this link and the ansible.cfg default config at here.
+
+ProTip
+
+Instead of using /etc/ansible/ansible.cfg file, you can create an ansible.cfg file in the directory where you have created the playbook or from the directory where you are running Ansible commands.
+
+Ad-hoc commands
+
+Ansible uses ad-hoc command to execute a single task on one or more remote hosts, and this way of executing a command is easy and fast, but it’s not reusable like the playbook.
+
+For example, we want to use ping module through ad-hoc command. But before we do that, we will have to ensure the SSH’s yes/no prompt is not shown while running the ansible commands, so let’s use the ssh-keyscan to capture the key signatures beforehand.
+
+ssh-keyscan -t rsa devsecops-box-p9v0d2l8 sandbox-p9v0d2l8 prod-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Then execute the ansible command.
+
+ansible -i inventory.ini all -m ping
+
+As you can see the command output above, all our hosts (line number 1, 8 and 15) are connected to Ansible. Next, use the shell module of Ansible to run the hostname command on all machines.
+
+ansible -i inventory.ini all -m shell -a "hostname"
+
+We can use another module to install a package inside the remote host.
+
+ansible -i inventory.ini all -m apt -a "name=ntp"
+
+To find the available modules, you can check out this link or use the local help command-line tool.
+
+ansible-doc -l | egrep "add_host|amazon.aws.aws"
+
+
+QUESTION 
+Use the ansible-doc command to see help examples and find a module that can send a file from DevSecOps-Box to remote machines
+ANSWER
+ansible-doc -h
+
+QUESTION 
+Create a file with some content, let the file name be notes at the location /root
+ANSWER 
+echo "test" > /root/notes
+
+QUESTION 
+
+Using an ansible ah-hoc command, copy the file /root/notes into all remote machines (sandbox and production) to the destination directory /roo
+
+ANSWER 
+
+ansible -i inventory.ini all -m copy -a "src=/root/notes dest=/root"
