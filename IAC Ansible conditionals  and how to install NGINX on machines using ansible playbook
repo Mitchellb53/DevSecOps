@@ -1,0 +1,221 @@
+Install Ansible
+
+pip3 install ansible==6.4.0
+
+create an inventory file to save our remote hosts to be used by Ansible. Let’s create the file using the following command.
+
+cat > inventory.ini <<EOL
+
+# DevSecOps Studio Inventory
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[sandbox]
+sandbox-p9v0d2l8
+
+EOL
+
+
+As Ansible uses SSH as its RPC mechanism, we will have to ensure the SSH’s yes/no prompt doesn’t wait for our input indefinitely while running the Ansible commands. To overcome this, we will be using the ssh-keyscan command to capture the key signatures beforehand.
+
+ssh-keyscan -t rsa sandbox-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Let’s do this for the rest of the systems in this lab as well.
+
+ssh-keyscan -t rsa devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+
+[COMBINED VERSION OF BOTH LINES ABOVE]
+ssh-keyscan -t rsa sandbox-p9v0d2l8 devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+when
+In Ansible, we can use conditionals to run a single task or multiple tasks in a playbook. Before doing this exercise, you should be familiar with Ad-hoc commands and Ansible Playbook to easily understand conditionals.
+
+Let’s start by creating a simple task to use when statement in the playbook.
+
+cat > main.yml <<EOL
+---
+- name: Simple playbook
+  hosts: all
+  remote_user: root
+  gather_facts: yes     # what does it means?
+
+  tasks:
+  - debug:
+      msg: "This system uses Ubuntu-based distro"
+    when: ansible_distribution == "Ubuntu"
+EOL
+
+How did you get ansible_distribution as conditions?
+
+We can use the setup module in ansible to discover variables about a system.
+
+execute this command to use setup module as ad-hoc commands:
+
+ansible -i inventory.ini all -m setup
+
+Let’s run our playbook using the following command.
+
+ansible-playbook -i inventory.ini main.yml
+
+Let’s try to change the value of our when condition from Ubuntu to CentOS.
+
+cat > main.yml <<EOL
+---
+- name: Simple playbook
+  hosts: all
+  remote_user: root
+  gather_facts: yes     # what does it mean?
+
+  tasks:
+  - debug:
+      msg: "This system is used CentOS-based distro"
+    when: ansible_distribution == "CentOS"
+EOL
+ansible-playbook -i inventory.ini main.yml
+
+
+register
+register statement is used to save a task as a new variable that can be used for the desired tasks. To understand how it works, let’s replace the previous main.yml file by executing the following command.
+
+cat > main.yml <<EOL
+---
+- name: Simple playbook
+  hosts: all
+  remote_user: root
+  gather_facts: no     # what does it mean?
+
+  tasks:
+  - name: Show the content of /etc/os-release
+    command: cat /etc/os-release
+    register: os_release
+
+  - debug:
+      msg: "This system uses Ubuntu-based distro"
+    when: os_release.stdout.find('Ubuntu') != -1
+EOL
+
+The first task uses the command module to execute cat /etc/os-release command and if you execute cat /etc/os-release on the DevSecOps Box, the output is as below.
+
+We will use the above output in the next task to find Ubuntu string.
+
+when: os_release.stdout.find('Ubuntu') != -1
+
+
+You can see two properties in the syntax above, there is stdout (output of the command) and find (search for particular strings). We use it in a conditional statement to print a message in the terminal when the string Ubuntu is found.
+
+Then, run the playbook once again to review the expected output.
+
+ansible-playbook -i inventory.ini main.yml
+
+
+QUESTION 
+
+Create a new playbook file at /task1/main.yml that contains a task to check if the nginx package is installed or not using stat module
+
+ANSWER 
+
+Create a playbook to check if nginx is installed or not.
+
+mkdir /task1
+
+cat > /task1/main.yml <<EOL
+- name: Playbook to install nginx
+  hosts: all
+  remote_user: root
+  become: yes
+
+  # We are checking avaibility of nginx binary at a specific location
+  tasks:
+    - name: check if nginx installed
+      stat:
+        path: /usr/sbin/nginx
+      register: stat_nginx
+EOL
+
+Re-run the ansible command.
+
+ansible-playbook -i inventory.ini task1/main.yml
+
+
+QUESTION 
+Add another task with name Print version to print the nginx version by using the msg module if nginx is installed
+
+ANSWER
+
+Create a playbook to check if nginx is installed or not.
+
+cat > /task1/main.yml <<EOL
+- name: Playbook to install nginx
+  hosts: all
+  remote_user: root
+  become: yes
+
+  # We are checking avaibility of nginx binary at a specific location
+  tasks:
+    - name: check if nginx installed
+      stat:
+        path: /usr/sbin/nginx
+      register: stat_nginx
+
+    - name: get nginx version
+      command: nginx -v
+      register: nginx_version
+      when: stat_nginx.stat.exists
+
+    - name: Print version
+      debug:
+        msg: "{{ nginx_version.stderr }}"
+      when:
+        - nginx_version is defined
+        - stat_nginx.stat.exists
+EOL
+
+Re-run the ansible command.
+
+ansible-playbook -i inventory.ini task1/main.yml
+
+
+QUESTION 
+
+Otherwise, let your playbook install the missing nginx using the apt module in the sandbox machine
+
+ANSWER 
+
+Here is the complete playbook.
+
+cat > /task1/main.yml <<EOL
+- name: Playbook to install nginx
+  hosts: sandbox
+  remote_user: root
+  become: yes
+
+  # We are checking avaibility of nginx binary at a specific location
+  tasks:
+    - name: check if nginx installed
+      stat:
+        path: /usr/sbin/nginx
+      register: stat_nginx
+
+    - name: get nginx version
+      command: nginx -v
+      register: nginx_version
+      when: stat_nginx.stat.exists
+
+    - name: Print version
+      debug:
+        msg: "{{ nginx_version.stderr }}"
+      when:
+        - nginx_version is defined
+        - stat_nginx.stat.exists
+
+    - name: install nginx if not exist
+      apt:
+        name: nginx
+        state: present
+        update_cache: true
+      when: not stat_nginx.stat.exists
+EOL
+Re-run the ansible command.
+
+ansible-playbook -i inventory.ini task1/main.yml
