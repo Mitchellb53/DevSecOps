@@ -1,0 +1,156 @@
+Install InSpec
+Chef InSpec is an open-source framework for testing and auditing your applications and infrastructure. Chef InSpec works by comparing the actual state of your system with the desired state that you express in easy-to-read and easy-to-write Chef InSpec code. Chef InSpec detects violations and displays findings in the form of a report, but puts you in control of remediation.
+
+
+Download the Inspec debian package from the InSpec website.
+
+wget https://packages.chef.io/files/stable/inspec/4.37.8/ubuntu/18.04/inspec_4.37.8-1_amd64.deb
+
+Install the downloaded package.
+
+dpkg -i inspec_4.37.8-1_amd64.deb
+
+We have successfully installed the Inspec tool, let’s explore the functionality it provides us.
+
+inspec --help
+
+Run the Inspec profile
+
+
+Let’s try to check whether our servers follow the linux-baseline best practices. We will be using the Dev-Sec’s linux-baseline Inspec profile.
+
+Before executing the profile, we need to run the below command:
+
+echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+
+This command prevents the ssh agent from prompting YES or NO question.
+
+Let’s run the Inspec against the production server.
+
+inspec exec https://github.com/dev-sec/linux-baseline -t ssh://root@prod-p9v0d2l8 -i ~/.ssh/id_rsa --chef-license accept
+
+The first parameter tells the Inspec profile that we need to run against the server
+-t tells the target machine
+-i flag used to specify the ssh-key since we are using login in via ssh
+--chef-license accept tells that we are accepting license this commands prevent the inspec from prompting YES or NO question
+
+
+QUESTION 
+
+Use hysnsec/inspec docker image to perform continuous compliance scanning with https://github.com/dev-sec/linux-baseline profile and embed it as part of the prod stage with job name as inspec
+
+ANSWER 
+
+inspec:
+  stage: prod
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOYMENT_SERVER_SSH_PRIVKEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -t rsa $DEPLOYMENT_SERVER >> ~/.ssh/known_hosts
+  script:
+    - docker run --rm -v ~/.ssh:/root/.ssh -v $(pwd):/share hysnsec/inspec exec https://github.com/dev-sec/linux-baseline -t ssh://root@$DEPLOYMENT_SERVER -i ~/.ssh/id_rsa --chef-license accept
+
+QUESTION 
+
+The job should only be triggered when changes are pushed to the main branch (don’t use rules attribute)
+
+ANSWER 
+
+
+inspec:
+  stage: prod
+  only:
+    - main
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOYMENT_SERVER_SSH_PRIVKEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -t rsa $DEPLOYMENT_SERVER >> ~/.ssh/known_hosts
+  script:
+    - docker run --rm -v ~/.ssh:/root/.ssh -v $(pwd):/share hysnsec/inspec exec https://github.com/dev-sec/linux-baseline -t ssh://root@$DEPLOYMENT_SERVER -i ~/.ssh/id_rsa --chef-license accept
+
+QUESTION 
+
+Save the output as JSON file at /share/inspec-output.json and upload it using artifacts attribute
+
+ANSWER
+
+inspec:
+  stage: prod
+  only:
+    - main
+  environment: production
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOYMENT_SERVER_SSH_PRIVKEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -t rsa $DEPLOYMENT_SERVER >> ~/.ssh/known_hosts
+  script:
+    - docker run --rm -v ~/.ssh:/root/.ssh -v $(pwd):/share hysnsec/inspec exec https://github.com/dev-sec/linux-baseline -t ssh://root@$DEPLOYMENT_SERVER -i ~/.ssh/id_rsa --chef-license accept --reporter json:/share/inspec-output.json
+  artifacts:
+    paths: [inspec-output.json]
+    when: always
+
+
+Embed Inspec in CI/CD pipeline
+
+Click the Expand button under the Variables section, then click on the Add Variable button.
+
+Add the following key/value pair in the form.
+
+Name	Value
+Key	DEPLOYMENT_SERVER
+Value	prod-p9v0d2l8
+Name	Value
+Key	DEPLOYMENT_SERVER_SSH_PRIVKEY
+Value	Copy the private key from the prod machine using SSH. The SSH key is available at /root/.ssh/id_rsa
+Finally, Click on the button Add Variable.
+
+Next, please visit https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/-/blob/main/.gitlab-ci.yml.
+
+Click on the Edit button and append the following code to the .gitlab-ci.yml file.
+
+inspec:
+  stage: prod
+  only:
+    - main
+  environment: production
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOYMENT_SERVER_SSH_PRIVKEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -t rsa $DEPLOYMENT_SERVER >> ~/.ssh/known_hosts
+  script:
+    - docker run --rm -v ~/.ssh:/root/.ssh -v $(pwd):/share hysnsec/inspec exec https://github.com/dev-sec/linux-baseline -t ssh://root@$DEPLOYMENT_SERVER -i ~/.ssh/id_rsa --chef-license accept --reporter json:/share/inspec-output.json
+  artifacts:
+    paths: [inspec-output.json]
+    when: always
+Note
+
+/share directory should be used when using hysnsec/inspec image. Because it’s a custom image adding another directory would not work when you are saving the inspec output.
+
+Reference: https://docs.chef.io/inspec/reporters.
+
+Save changes to the file using the Commit changes button.
+
+Don’t forget to set DEPLOYMENT_SERVER variable under Settings (Project Settings > CI/CD > Variables > Expand > Add Variable), otherwise your build will fail.
+
+We can see the results by visiting https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/pipelines.
+
+Click on the appropriate job name to see the output.
+
+Remember!
+
+Did you notice the job failed because of exit code 100. Why did the job fail? The inspec tool found several control failures and you need to fix them or add allow_failure: true to pass the job and move to next job. Please refer the Linux Exit Code exercise in Linux Basics chapter.
+
+There you have it. We have run the Inspec locally and then embedded it into a CI/CD pipeline.
