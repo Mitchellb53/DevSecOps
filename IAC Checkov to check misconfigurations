@@ -1,0 +1,56 @@
+Install Checkov
+
+We will do all the exercises locally first in DevSecOps-Box, so lets start the exercise.
+
+Let’s install checkov on the system to perform static analysis on your IaC.
+
+pip3 install checkov==2.3.22
+
+Download vulnerable infrastructure
+
+Let’s clone an example IaC (terraform) repository with the following command.
+
+git clone https://gitlab.practical-devsecops.training/pdso/terraform.git
+
+We can use -h to check various options provided by Chekov.
+
+checkov -h
+
+Run Checkov tool
+
+Checkov can perform the static scan on a directory or a file. In this scenario, we will try to scan terraform/aws/s3.tf to find misconfiguration related to AWS S3 buckets.
+
+checkov -f terraform/aws/s3.tf
+
+As you can see, checkov found security issues in our Terraform configurations/code.
+
+If you are interested in scanning a directory, you can use the following command.
+
+checkov -d terraform/aws
+
+QUESTION 
+
+Scan the entire directory (/terraform) and save the output into a JSON file at /terraform/scan-result.json
+
+ANSWER 
+
+checkov -d /terraform/ -o json > /terraform/scan-result.json
+
+QUESTION 
+
+Identify the number of failed checks from the checkov tool’s scan result?
+
+ANSWER 
+
+You can check your scan result file /terraform/scan-result.json,
+or directly using this command:
+
+jq ".[0].summary.failed" /terraform/s
+
+QUESTION 
+
+Identify how a specific check can be skipped and skip the checks with codes CKV_AWS_18, CKV_AWS_21, CKV_AWS_20, CKV_AWS_52, CKV_AWS_19. Also, save the output into a JSON file at /terraform/scan-result-skipped.json
+
+ANSWER 
+checkov -d /terraform/ -o json --skip-check CKV_AWS_18,CKV_AWS_21,CKV_AWS_20,CKV_AWS_52,CKV_AWS_19 > /terraform/scan-result-skipped.json
+
