@@ -1,0 +1,85 @@
+Install Ansible and Ansible Vault
+
+We will do all the exercises locally first in DevSecOps-Box, so let’s start the exercise.
+
+First, we need to install the ansible, ansible-vault is installed by default when you install ansible.
+
+pip3 install ansible==6.4.0
+
+Create the inventory file
+
+cat > inventory.ini <<EOL
+
+# DevSecOps Studio Inventory
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[prod]
+prod-p9v0d2l8
+
+EOL
+
+Next, we will have to ensure the SSH’s yes/no prompt is not shown
+
+ssh-keyscan -t rsa prod-p9v0d2l8 devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Run the ansible commands
+
+Let’s run the ansible ad-hoc command to check the production machine’s uptime. We can use the uptime command to find the uptime.
+
+ansible -i inventory.ini prod -m shell -a "uptime"
+
+Similarly, we can use other ansible modules to install/remove a package, copy a file or any other task on the production machine.
+
+For example, if we want to copy a file into the production machine.
+
+echo "hello" > example
+
+ansible -i inventory.ini prod -m copy -a "src=example dest=/example"
+
+Let’s check the file is copied to the production machine.
+
+ssh root@prod-p9v0d2l8
+
+ls /
+
+As you can see, the file was successfully copied from DevSecOps Box to the production machine with the help of Ansible. 
+
+Let’s go back to the DevSecOps-Box machine to try out Ansible Vault functionality of Ansible.
+
+exit
+
+Encrypted Data with Ansible Vault 
+
+
+Ansible provides the ability to store secrets securely using Ansible Vault. Ansible can even send this file securely over the network using secure mechanisms like SSH and AES. For example, securely send a file containing a password over the network.
+
+echo "StrongP@ssw0rd" > /secret
+
+However, this file is not encrypted, and storing it in the source code is insecure, and hence not recommended. We can use ansible-vault command to encrypt the contents of the file before storing it into the code repository.
+
+ansible-vault encrypt /secret --ask-vault-pass
+
+You can use the following password as your password or anything you desire but ensure you remember this password as its needed when running ansible-playbook command.
+
+Name	Value
+Password	C0mpl3xp@sswOrd
+New Vault password:
+Confirm New Vault password:
+Encryption successful
+The above command encrypts the file using the AES algorithm, we can verify it by using the cat command.
+
+cat /secret
+
+No one but folks who know the ansible vault’s password can edit or view the file. Ansible provides an easy way to provide this password when the encrypted files need to be decrypted. This option/flag is called --ask-vault-pass.
+
+ansible -i inventory.ini prod --ask-vault-pass -m copy -a "src=/secret dest=/secret"
+
+
+Remember the decryption password for this file is C0mpl3xp@sswOrd.
+
+Let’s SSH into our production machine.
+
+ssh root@prod-p9v0d2l8 "cat /secret"
+
+As you can see, the file was transferred to the remote machine after Ansible Vault decrypted the file.
