@@ -1,0 +1,283 @@
+Nuclei Vulnerability Scanner
+
+we will use nuclei scanner to find security issues passively.
+
+Before that, let’s install nuclei binary from source.
+
+wget https://github.com/projectdiscovery/nuclei/releases/download/v2.9.6/nuclei_2.9.6_linux_amd64.zip
+unzip nuclei_2.9.6_linux_amd64.zip
+mv nuclei /usr/local/bin/nuclei
+Let’s see the usage of nuclei Scan.
+
+nuclei --help
+
+Setup the Application
+Before moving forward, we will set up our application in sandbox server to perform scans in a running application, and analyze the results to fix issues.
+
+Let’s login in to sandbox server.
+
+ssh root@sandbox-p9v0d2l8
+
+Install Nginx as a reverse proxy to expose our application to the outside world.
+
+apt update && apt install -y nginx
+
+Next, clone the project from git repository.
+
+git clone https://gitlab.practical-devsecops.training/pdso/vuln-api.git
+
+Let’s cd into the application so we can run the application.
+
+cd vuln-api
+
+We are now in the app directory, let’s build the Docker image.
+
+docker build -t vuln-api .
+
+Once done, we can execute the following command to run the application.
+
+docker run -d --name flask -p 5000:5000 vuln-api
+
+You can see the response from the application in the host machine by curl command.
+
+curl localhost:5000
+
+This application can only be accessed on its machine through localhost. We will configure Nginx to expose our app publicly. Please execute the following command to replace the existing config at /etc/nginx/sites-available/default, or you can use any text editor to modify the file.
+
+cat > /etc/nginx/sites-available/default<<EOF
+server{
+    listen      80;
+    server_name sandbox-p9v0d2l8.lab.practical-devsecops.training;
+
+    access_log  /var/log/nginx/flask_access.log;
+    error_log   /var/log/nginx/flask_error.log;
+
+    proxy_buffers 16 64k;
+    proxy_buffer_size 128k;
+
+    location / {
+        proxy_pass  http://localhost:5000;
+        proxy_redirect off;
+
+        proxy_set_header    Host            \$host;
+        proxy_set_header    X-Real-IP       \$remote_addr;
+        proxy_set_header    X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header    X-Forwarded-Proto http;
+    }
+}
+EOF
+Restart the nginx service.
+
+systemctl restart nginx
+
+Now, you can access the application by visiting https://sandbox-p9v0d2l8.lab.practical-devsecops.training.
+
+Exit from sandbox machine.
+
+exit
+
+
+HTTP Header scanning
+In this step we want to analyze the issue caused from HTTP header to know if those are misconfiguration happened.
+
+Let’s create http-header.yaml template.
+
+cat > http_header.yaml << EOF
+id: http-header
+
+info:
+  name: HTTP Missing Security Headers
+  author: Practical DevSecOps
+  severity: medium
+  tags: headers, http
+
+requests:
+  - method: GET
+    path:
+      - "{{BaseURL}}"
+
+    host-redirects: true
+    max-redirects: 3
+    matchers-condition: or
+    matchers:
+      - type: word
+        part: header
+        words:
+          - Set-Cookie
+          - HttpOnly
+        condition: and
+        case-insensitive: true
+
+      - type: dsl
+        name: strict-transport-security
+        dsl:
+          - "!regex('(?i)strict-transport-security', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: content-security-policy
+        dsl:
+          - "!regex('(?i)content-security-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: permissions-policy
+        dsl:
+          - "!regex('(?i)permissions-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: x-frame-options
+        dsl:
+          - "!regex('(?i)x-frame-options', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: x-content-type-options
+        dsl:
+          - "!regex('(?i)x-content-type-options', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: x-permitted-cross-domain-policies
+        dsl:
+          - "!regex('(?i)x-permitted-cross-domain-policies', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: referrer-policy
+        dsl:
+          - "!regex('(?i)referrer-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: clear-site-data
+        dsl:
+          - "!regex('(?i)clear-site-data', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: cross-origin-embedder-policy
+        dsl:
+          - "!regex('(?i)cross-origin-embedder-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: cross-origin-opener-policy
+        dsl:
+          - "!regex('(?i)cross-origin-opener-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: cross-origin-resource-policy
+        dsl:
+          - "!regex('(?i)cross-origin-resource-policy', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-allow-origin
+        dsl:
+          - "!regex('(?i)access-control-allow-origin', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-allow-credentials
+        dsl:
+          - "!regex('(?i)access-control-allow-credentials', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-expose-headers
+        dsl:
+          - "!regex('(?i)access-control-expose-headers', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-max-age
+        dsl:
+          - "!regex('(?i)access-control-max-age', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-allow-methods
+        dsl:
+          - "!regex('(?i)access-control-allow-methods', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+
+      - type: dsl
+        name: access-control-allow-headers
+        dsl:
+          - "!regex('(?i)access-control-allow-headers', all_headers)"
+          - "status_code != 301 && status_code != 302"
+        condition: and
+EOF
+Let’s run the command to inspect the SQL Injection vulnerability to the target.
+
+nuclei -u https://sandbox-p9v0d2l8.lab.practical-devsecops.training -t http_header.yaml
+
+There will be explained us in details with JSON format output.
+
+nuclei -u https://sandbox-p9v0d2l8.lab.practical-devsecops.training -t http_header.yaml -j | jq
+
+Based on the severity, we set the severity level to medium. Since these issues flag missing security headers, it indicates that the website might be susceptible to certain security vulnerabilities, such as XSS, clickjacking or other potential attacks.
+While missing headers don’t directly cause these vulnerabilities, they make it easier for attackers to exploit existing vulnerabilities in the application. However, keep in mind that the severity level is subjective and depends on our specific application’s requirements and risk tolerance.
+
+SQL Injection Scanning
+Website would be vulnerable for the database exploration. We will scan SQ inside of website that can be the vulnerability issue.
+
+Let’s scan everything related to security header to know the vulnerability expected in the Website.
+
+First, we should create the template rule for defining Misconfiguration related to security header rule.
+
+cat > sql-injection.yaml << EOF
+id: sqli
+
+info:
+  name: SQL Injection
+  author: Practical DevSecOps
+  severity: High
+
+requests:
+  - method: GET
+
+    path:
+      - "{{BaseURL}} %22%22|0;#"
+      - "{{BaseURL}} %22 OR 1 = 1 -- -#"
+      - "{{BaseURL}} OR 1=1"
+      - "{{BaseURL}} 1' ORDER BY 1,2,3--+"
+      - "{{BaseURL}} 1' GROUP BY 1,2,3--+"
+
+    extractors:
+      - type: regex
+        part: body
+        regex:
+          - "SQLite/JDBCDriver|SQLite.Exception|System.Data.SQLite.SQLiteException|Warning.*sqlite_.*|Warning.*SQLite3::|SQLITE_ERROR|sqlite3.*|\\\[|null"
+EOF
+We can add more SQLi payloads in path field to do fuzzing.
+
+Let’s run the command to inspect the SQL Injection vulnerability to the target.
+
+nuclei -u https://sandbox-p9v0d2l8.lab.practical-devsecops.training/api/v1/resources/todos/ -t sql-injection.yaml
+
+
+These findings indicate that the application may be vulnerable to SQL Injection attacks. The scanner detected a potential SQLi vulnerability by using an encoded payload “%20%22%22%7C0;, but no specific error message was retrieved ([null]). Furthermore, The second and third lines represent SQLi attacks where the payloads %20%22%20OR%201%20=%201%20–%20- and %20OR%201=1 were used, causing sqlite3.OperationalError messages in the application’s response. The error messages suggest that the application may not be sanitizing the input properly, allowing SQLi attacks to occur. Those also similar for fourth and fifth lines.
+
+There will be explained us in details with JSON format output.
+
+nuclei -u https://sandbox-p9v0d2l8.lab.practical-devsecops.training/api/v1/resources/todos/ -t sql-injection.yaml -j | jq
