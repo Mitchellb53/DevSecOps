@@ -1,0 +1,64 @@
+A simple CI/CD pipeline
+Create a new projects by visiting https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/projects/new#blank_project, give the project name terraform and url user root. Next, click Create project button. Once done we need to push our source code into GitLab, let’s download the code using git clone in DevSecOps Box.
+
+git clone https://gitlab.practical-devsecops.training/pdso/terraform.git terraform
+
+cd terraform
+
+Rename git url to the new one.
+
+git remote rename origin old-origin
+
+git remote add origin git@gitlab-ce-p9v0d2l8:root/terraform.git
+
+Then, push the code into the repository.
+
+git push -u origin --all
+
+And enter the GitLab credentials.
+
+
+
+As discussed in the Secure IaC using Checkov exercise, we can embed Checkov in our CI/CD pipeline. However, you need to test the command manually before you embed this SAST tool in the pipeline.
+
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+checkov:
+  stage: validate
+  script:
+    - docker pull bridgecrew/checkov
+    - docker run --rm -w /src -v $(pwd):/src bridgecrew/checkov -d aws -o json | tee checkov-output.json
+  artifacts:
+    paths: [checkov-output.json]
+    when: always
+  allow_failure: true   #<--- allow the build to fail but don't mark it as such
+
+
+test:
+  stage: test
+  script:
+    - echo "This is a test step"
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+    - exit 1
+  allow_failure: true # Even if the job fails, continue to the next stages
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+  when: manual # Continuous Delivery
