@@ -1,0 +1,55 @@
+Install the InSpec package via script.
+
+curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
+
+
+Inspec shell is an interactive way to explore Inspec to discover resources you can use to test your configurations.
+
+Before executing the shell, we need to run the below command:
+
+echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+inspec shell -t ssh://root@prod-p9v0d2l8 -i ~/.ssh/id_rsa --chef-license accept
+
+Inspec shell allows us to quickly run Inspec controls and tests without having to write it to a file. 
+
+This allows us to explore what is available as well as debug profiles.
+help
+
+We can run the help resources command to see which resources are available.
+
+help resources
+
+Since Inspec is built using Ruby, we can use Ruby syntax to retrieve out methods available to the file resource.
+
+file('/tmp').class.superclass.instance_methods(false).sort
+
+In addition, we can tap on ruby feature (predicate method) that ends in ?. This returns a Boolean value of True/False.
+
+file('/tmp').directory?
+
+file('/tmp').exist?
+
+file('/tmp').content
+
+You can use the arrow or Page Up and Page Down keys to scroll through the list. When you’re done, press
+
+Q
+
+
+We are also able to run tests to check if we should include this in subsequent profiles. For example, to check if tmp is a directory created, we can use the following:
+
+describe file('/tmp') do
+it { should be_directory }
+end
+We can also use os_env to test the environment variables for the platform on which the system is running.
+
+os_env('PATH')
+
+os_env('PATH').content
+
+os_env('PATH').split
+
+To exit the Inspec shell session, type exit.
+
+exit
