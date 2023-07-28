@@ -1,0 +1,157 @@
+Install Inspec Tool
+
+
+Install the InSpec package via script.
+
+curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
+
+inspec --help
+
+Create a new folder and cd into that folder.
+
+mkdir inspec-profile && cd inspec-profile
+
+Create the Ubuntu profile.
+
+inspec init profile ubuntu --chef-license accept
+
+Run the following command to append the inspec task to the file at ubuntu/controls/example.rb. If you wish, you can edit the file using nano or any text editor.
+
+cat >> ubuntu/controls/example.rb <<EOL
+describe file('/etc/shadow') do
+    it { should exist }
+    it { should be_file }
+    it { should be_owned_by 'root' }
+  end
+EOL
+
+This code basically checks whether shadow file is owned by root or not.
+
+Let’s validate the profile to make sure there are no syntax errors.
+
+inspec check ubuntu
+
+Now run the profile on the local-machine before executing on the server.
+
+inspec exec ubuntu
+
+
+
+Run the Inspec tool to test for compliance against a server
+
+
+Let’s try to run the custom profile created by us against the server. Before executing the profile we need to execute the below command to avoid being prompted with Yes or No when connecting to a server via ssh.
+
+echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+
+Let’s run inspec with the following options.
+
+inspec exec ubuntu -t ssh://root@prod-p9v0d2l8 -i ~/.ssh/id_rsa --chef-license accept
+
+
+The flags/options used in the above commands are:
+
+Note
+
+-t specifies the target machine to run the Inspec profile against. Here we are using ssh as a remote login mechanism, but we can also use winrm(windows), container(docker) etc.,
+-i provides the path where the remote/local machine’s ssh key is stored.
+--chef-license option ensures that we are accepting license agreement automatically.
+
+QUESTION 
+
+Use inspec init to create a new inspec profile with name challenge under /inspec-profile directory
+
+ANSWER 
+
+mkdir /inspec-profile
+cd /inspec-profile
+inspec init profile challenge --chef-license accept
+
+QUESTION 
+
+Edit our newly created Inspec skeleton to add four basic checks (system, password, ssh, and useradd) from PCI/DSS requirements
+
+ANSWER 
+
+Run the command below to add PCI/DSS checks.
+
+cat > /inspec-profile/challenge/controls/example.rb <<EOL
+describe file('/etc/pam.d/system-auth') do
+    its('content') { 
+        should match(/^\s*password\s+requisite\s+pam_pwquality\.so\s+(\S+\s+)*try_first_pass/)
+    }
+    its('content') {
+        should match(/^\s*password\s+requisite\s+pam_pwquality\.so\s+(\S+\s+)*retry=[3210]/)
+    }
+end
+
+describe file('/etc/pam.d/password-auth') do
+    its('content') { 
+        should match(/^\s*password\s+requisite\s+pam_pwquality\.so\s+(\S+\s+)*try_first_pass/)
+    }
+    its('content') {
+        should match(/^\s*password\s+requisite\s+pam_pwquality\.so\s+(\S+\s+)*retry=[3210]/)
+    }
+end
+
+describe file('/etc/default/useradd') do
+    its('content') {
+        should match(/&\s*INACTIVE\s*=\s*(30|[1-2][0-9]|[1-9])\s*(\s+#.*)?$/)
+    }
+end
+
+describe file('/etc/ssh/sshd_config') do
+    it { should exist }
+    it { should be_file }
+    it { should be_owned_by 'root' }
+    its('content') { should match 'PasswordAuthentication no' }
+end
+EOL
+
+QUESTION 
+Run the tests locally before setting it up in the CI pipeline
+
+ANSWER
+inspec check challenge
+inspec exec challenge
+
+QUSTION 
+
+Commit the inspec profile to the project’s repository using either the GitLab UI or Git commands
+
+ANSWER 
+
+Run the following commands to push challenge profile into your GitLab repository:
+
+git clone git@gitlab-ce-p9v0d2l8:root/django-nv.git
+cd django-nv
+cp -r /inspec-profile/challenge challenge
+git add challenge
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+git commit -m "Add custom inspec profile"
+git push origin main
+
+QUESTION 
+
+Re-create gitlab-ci.yml file to check and execute profile using inspec only with compliance job in the test stage
+
+ANSWER  
+
+Create a job named inspec in gitlab-ci.yml directly in django.nv repository.
+
+image: docker:20.10
+
+services:
+  - docker:dind
+
+stages:
+  - test
+
+compliance:
+    stage: test
+    script:
+        - docker run -i --rm -v $(pwd):/share chef/inspec check challenge --chef-license accept
+        - docker run -i --rm -v $(pwd):/share chef/inspec exec challenge --chef-license accept
+    allow_failure: true
