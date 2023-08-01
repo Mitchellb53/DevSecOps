@@ -1,0 +1,71 @@
+Install Inspec
+Install the InSpec package via script.
+
+curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
+
+Create the profile
+Create a new folder and cd into that folder.
+
+mkdir cis-ubuntu
+
+cd cis-ubuntu
+
+Test the barebone profile
+inspec init profile ubuntu --chef-license accept
+
+Run the audit command
+We will learn about custom matchers in Inspec, how we can use the correct resources for our control.
+
+Let’s choose 1 control from CIS Ubuntu 18.04 Benchmark, you can download the PDF from here and refer the page no. 384 “Ensure permissions on /etc/ssh/sshd_config are configured “.
+
+To find the file permission, we can use the stat command.
+
+stat /etc/ssh/sshd_config
+
+As we can see, we have 0644 as permission bits.
+To ensure only root has read access to this crucial file (loose permissions on this file can lead to serious security attacks), we will change its permissions and ownership.
+
+chown root:root /etc/ssh/sshd_config
+
+chmod og-rwx /etc/ssh/sshd_config
+
+We’ve learned about command and file resource in the previous exercises. What would be an appropriate resource to choose in this scenario?
+
+Edit the profile
+Run the following command to replace the Inspec task at ubuntu/controls/example.rb.
+
+cat > ubuntu/controls/example.rb <<EOL
+control 'ubuntu-5.2.1' do
+   title 'Ensure permissions on /etc/ssh/sshd_config are configured'
+   desc 'The /etc/ssh/sshd_configfile contains configuration specifications for sshd. The command below checks whether the owner and group of the file is root.'
+   describe file('/etc/ssh/sshd_config') do
+     its('owner') { should eq 'root'}
+     its('group') { should eq 'root'}
+     its('mode') { should cmp '0600' }
+   end
+end
+EOL
+
+In the above task we are checking for three things.
+1. Ensure the owner of the file is root.
+2. Ensure this file belongs to the root group.
+3. The mode/permissions are read-only for root.
+
+Lets validate the profile to ensure there are no syntax errors.
+
+inspec check ubuntu
+
+Now run the profile on the local-machine before executing it against the remote server
+
+inspec exec ubuntu
+
+Run the Inspec profile against a remote server
+Let’s try to run the custom profile created by us against the remote server
+
+echo "StrictHostKeyChecking accept-new" >> ~/.ssh/config
+
+inspec exec ubuntu -t ssh://root@prod-p9v0d2l8 -i ~/.ssh/id_rsa --chef-license accept
+
+-t : tells the target machine to run the profile against.
+-i : provides the path where the remote machine’s ssh key is stored.
+--chef-license : accept ensures that we are accepting license agreement there by preventing the inspec from prompting YES or NO question.
