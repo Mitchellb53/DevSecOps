@@ -1,0 +1,164 @@
+DefectDojo Model
+
+DefectDojo is a security tool that automates application security vulnerability management. DefectDojo streamlines the application security testing process by offering features such as importing third party security findings, merging and de-duping, integration with Jira, templating, report generation and security metrics.
+
+
+Once you are logged into the DefectDojo system, you will see a default dashboard that shows 1 Engagement, 0 Finding, and also empty metrics.
+
+Machine Details	
+URL	dojo-p9v0d2l8.lab.practical-devsecops.training/api/key-v2
+Username	root
+Password	pdso-training
+
+Product Type
+This is the top model representation in DefectDojo, which is associated with other components like Product, Engagement, Finding, Endpoint, Benchmark, and so on. Using this model you can categorize your product based on division, department, function, portfolio, application type, etc.
+
+In the DefectDojo machine, you can find the All Product Types option in the sidebar and you will see we have two types Research and Development and Web Application.
+
+Depending on how your organization, teams, products are structured, you can decide the product types with your team.
+
+The general guideline is the product types should help in managing and visualizing vulnerabilities effectively, so necessary vulnerability metrics are radiated to various teams accordingly.
+
+Product
+The name of your project, program or product whose vulnerabilities need to be aggregated and managed. For example Django API, Django Web or you can give a specific name like Django - Payment Service and so on.
+
+Engagement
+Your testing activity, associated with a name, timeline, how many tests are run, findings.
+
+Test
+Tests are a grouping of activities conducted by engineers to discover vulnerabilities in a product. Defect Dojo supports importing and managing vulnerabilities from a wide range of security tooling including, but not limited to Bandit, ZAP, BurpSuite, Checkmarx, Acunetix, Nessus, etc.
+
+Finding
+Findings represent vulnerabilities discovered while testing, categorized with severity like Critical, High, Medium, Low, and Informational.
+
+Endpoint
+Represents the domain name or IP address of systems under test.
+
+
+
+Download the source code
+We will do all the exercises locally first in DevSecOps-Box, so let’s start the exercise.
+
+First, we need to download the source code of the sample Rails project from our git repository.
+
+git clone https://gitlab.practical-devsecops.training/pdso/rails.git webapp
+
+Let’s cd into the application so we can scan the app.
+
+cd webapp
+
+Install SAST Tool
+
+
+Note
+
+Installing the tool will spend a lot of time instead of using _ docker _, we don’t need to install any libraries and make our process efficient.
+
+We will use docker to run brakeman scanner on the system to perform static analysis.
+
+docker run --rm -v $(pwd):/src hysnsec/brakeman -f json /src
+
+As we have learned in the DevSecOps Gospel, we would like to store the scan results in a JSON file. We are using the tee command here to show the output and store it in a file simultaneously.
+
+docker run --rm -v $(pwd):/src hysnsec/brakeman -f json /src | tee brakeman-result.json
+
+
+Create a new Engagement
+
+In this step, we will create a new engagement for our Ruby application.
+
+You need to first log into DefectDojo using the following credentials:
+
+Machine Details	
+URL	dojo-p9v0d2l8.lab.practical-devsecops.training/
+Username	root
+Password	pdso-training
+
+We will start by creating a Product first. In the sidebar, click on Add Product and fill the forms with the following information.
+
+Name	Value
+Name	Rails
+Description	Web Application based on Rails framework
+Product Type	Web Application
+Business criticality	Medium
+Platform	Web
+
+Leave other form fields empty. In the Product manager, Technical contact and Team manager, you can fill in appropriate details in real world scenarios. We only have one user named root, so if you want to add more specific users you need to create those users first before assigning them to the new product.
+
+Then, click Submit button and you just created your own product in DefectDojo.
+
+In this product we can’t upload any scan report because there is no engagement, lets create an engagement by clicking on Engagements in the menu and selecting Add New Interactive Engagement.
+
+Fill the form with the following information.
+
+Name	Value
+Name	SAST Scan
+Description	SAST activities
+Target start	You can pick any custom date as the engagement start date
+Target end	You can pick any custom date as the engagement end date
+Status	In Progress
+Product	Rails
+
+You can also fill the other optional fields if you like, for example Version, Repo etc., however fields marked with * symbol are mandatory.
+
+
+Upload The Results To DefectDojo
+
+DefectDojo provides an API to upload the scan results, which is an excellent feature for uploading scan results during CI/CD process.
+
+Note
+
+Not all security scanners can be integrated and used for uploading the results to DefectDojo.
+
+Please refer to this link to check the available security scanners.
+
+We have created a simple upload script for you, and you can download this script using the following command.
+
+curl https://gitlab.practical-devsecops.training/-/snippets/3/raw -o upload-results.py
+
+After downloading the upload-results.py, we will install the requests module via pip3 since the upload-results.py uses methods from the python requests module.
+
+pip3 install requests
+
+Let’s explore the options provided by upload-results.py.
+
+python3 upload-results.py --help
+
+We need to provide the following inputs for the upload-results.py script to work.
+
+Name	Value
+HOST	https://dojo-p9v0d2l8.lab.practical-devsecops.training
+USERNAME	root
+API_KEY	Find it at https://dojo-p9v0d2l8.lab.practical-devsecops.training/api/key-v2
+ENGAGEMENT_ID	ID of the engagement, here its 1
+PRODUCT_ID	ID of product, here its 1
+LEAD_ID	ID of the user conducting the testing
+ENVIRONMENT:	Environment name
+SCANNER	Name of the scanner, this is case sensitive e.g., ZAP Scan, Bandit Scan, etc
+RESULT_FILE	The path to the tool’s output
+When working with Defect Dojo programmatically we need to authenticate to Defect Dojo. A common form of authentication when calling APIs is to use an API key. Use the following command to get an API key through curl, and save the API key as an environment variable API_KEY.
+
+export API_KEY=$(curl -s -XPOST -H 'content-type: application/json' https://dojo-p9v0d2l8.lab.practical-devsecops.training/api/v2/api-token-auth/ -d '{"username": "root", "password": "pdso-training"}' | jq -r '.token' )
+
+Note
+Make sure the API_KEY shows an output when executing the echo $API_KEY command. If the API_KEY is not echoed, please ensure you are able to navigate to the url after entering the required Defect Dojo credentials - https://dojo-p9v0d2l8.lab.practical-devsecops.training/api/v2.
+
+If you have trouble accessing the aforementioned url, you either need to wait for 2 minutes for Defect Dojo to be provisioned completely, or you would need to start the entire exercise again, since the Defect Dojo machine might have closed itself down after its own two hour lifetime.
+
+We can now upload the brakeman’s scan output (brakeman-result.json) to DefectDojo.
+
+python3 upload-results.py --host dojo-p9v0d2l8.lab.practical-devsecops.training --api_key $API_KEY --engagement_id 2 --product_id 3 --lead_id 1 --environment "Production" --result_file brakeman-result.json --scanner "Brakeman Scan"
+
+Note
+
+Your engagement id and product id is probably not same with the above command, so you need to review your product id and engagement id by visiting DefectDojo. As you browse through an engagement or product, the id will be displayed in the url, eg: /engagement/3.
+
+After uploading, visit the https://dojo-p9v0d2l8.lab.practical-devsecops.training/engagement/2 to review the uploaded issues.
+
+The scan result should be available in the engagement we had created.
+
+Select the Brakeman Scan, and you will see many issues with Medium severity.
+
+You can also mark the issues as False Positives . Click on one of the issues and you get Bulk Edit option, choose the Severity types as Medium, check False Positive button and click Submit button.
+
+The status of vulnerability will be changed to Inactive, False Positive.
