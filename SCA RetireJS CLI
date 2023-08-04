@@ -9,7 +9,7 @@ CODE TO DOWNLOAD NODEJS AND NPM
 curl -sL https://deb.nodesource.com/setup_16.x | bash -
 apt install nodejs -y
 npm install -g retire@3.2.3
-npm install
+
 
 RUN THE SCANNER 
 
