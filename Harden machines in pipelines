@@ -1,0 +1,183 @@
+Install Ansible
+
+pip3 install ansible==6.4.0
+
+Create the inventory file
+Let’s create the inventory or CMDB file for Ansible using the following command.
+
+cat > inventory.ini <<EOL
+
+# DevSecOps Studio Inventory
+[devsecops]
+devsecops-box-p9v0d2l8
+
+[gitservers]
+gitlab-ce-p9v0d2l8
+
+[prod]
+prod-p9v0d2l8
+
+EOL
+
+Next, we will have to ensure the SSH’s yes/no prompt is not shown while running the ansible commands, so we will be using ssh-keyscan to capture the key signatures beforehand.
+
+ssh-keyscan -t rsa prod-p9v0d2l8 >> ~/.ssh/known_hosts
+
+# prod-p9v0d2l8:22 SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
+Let’s do this for the rest of the system’s in the lab as well.
+
+ssh-keyscan -t rsa gitlab-ce-p9v0d2l8 >> ~/.ssh/known_hosts
+
+# gitlab-ce-p9v0d2l8:22 SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
+ssh-keyscan -t rsa devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+# devsecops-box-p9v0d2l8:22 SSH-2.0-OpenSSH_7.6p1 Ubuntu-4ubuntu0.3
+ProTip
+
+Instead of running the ssh-keyscan command twice, we can achieve the same using the below command.
+
+ssh-keyscan -t rsa prod-p9v0d2l8 gitlab-ce-p9v0d2l8 devsecops-box-p9v0d2l8 >> ~/.ssh/known_hosts
+
+Harden the production environment
+
+Dev-Sec Project has lots of good examples on how to create Ansible roles and uses lots of best practices which we can use as a baseline in our roles.
+
+For example, https://github.com/dev-sec/ansible-os-hardening.
+
+We will choose the dev-sec.os-hardening role from the dev-sec project to harden our production environment.
+
+ansible-galaxy install dev-sec.os-hardening
+
+Let’s create a playbook to use this role against a remote machine.
+
+cat > ansible-hardening.yml <<EOL
+---
+- name: Playbook to harden Ubuntu OS.
+  hosts: prod
+  remote_user: root
+  become: yes
+
+  roles:
+    - dev-sec.os-hardening
+
+EOL
+
+Let’s run this playbook against the prod machine to harden it.
+
+ansible-playbook -i inventory.ini ansible-hardening.yml
+
+Once the playbook runs, we should see the output as shown below.
+
+PLAY [Playbook to harden ubuntu OS.] *******************************************
+
+TASK [Gathering Facts] *********************************************************
+ok: [prod-p9v0d2l8]
+
+TASK [dev-sec.os-hardening : Set OS family dependent variables] ****************
+ok: [prod-p9v0d2l8]
+
+TASK [dev-sec.os-hardening : Set OS dependent variables] ***********************
+
+TASK [dev-sec.os-hardening : install auditd package | package-08] **************
+changed: [prod-p9v0d2l8]
+
+TASK [dev-sec.os-hardening : configure auditd | package-08] ********************
+changed: [prod-p9v0d2l8]
+
+TASK [dev-sec.os-hardening : find files with write-permissions for group] ******
+ok: [prod-p9v0d2l8] => (item=/usr/local/sbin)
+ok: [prod-p9v0d2l8] => (item=/usr/local/bin)
+ok: [prod-p9v0d2l8] => (item=/usr/sbin)
+ok: [prod-p9v0d2l8] => (item=/usr/bin)
+ok: [prod-p9v0d2l8] => (item=/sbin)
+ok: [prod-p9v0d2l8] => (item=/bin)
+
+...[SNIP]...
+
+PLAY RECAP *********************************************************************
+prod-p9v0d2l8              : ok=40   changed=19   unreachable=0    failed=0    skipped=27   rescued=0    ignored=0
+
+As we can see, there were 19 changes (changed=19) made to the production machine while hardening.
+
+Running ansible role as part of the CI pipeline.
+
+We can use the GitLab credentials provided below to login i.e.,
+
+Name	Value
+Username	root
+Password	pdso-training
+Click on the Expand button under the Variables section, then click the Add Variable button.
+
+Add the following key/value pair in the form.
+
+Name	Value
+Key	DEPLOYMENT_SERVER
+Value	prod-p9v0d2l8
+Name	Value
+Key	DEPLOYMENT_SERVER_SSH_PRIVKEY
+Value	Copy the private key from the production machine using SSH. The SSH key is available at /root/.ssh/id_rsa. Please refer to Advanced Linux Exercises for a refresher on SSH Keys
+# Ensure the lines -----BEGIN RSA PRIVATE KEY----- and -----END RSA PRIVATE KEY----- are also copied
+more /root/.ssh/id_rsa
+Finally, Click on the button Add Variable.
+
+Next, please visit https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/-/blob/main/.gitlab-ci.yml.
+
+Click on the Edit button and append the following code to the .gitlab-ci.yml file.
+
+ansible-hardening:
+  stage: prod
+  image: willhallonline/ansible:2.9-ubuntu-18.04
+  before_script:
+    - mkdir -p ~/.ssh
+    - echo "$DEPLOYMENT_SERVER_SSH_PRIVKEY" | tr -d '\r' > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - eval "$(ssh-agent -s)"
+    - ssh-add ~/.ssh/id_rsa
+    - ssh-keyscan -t rsa $DEPLOYMENT_SERVER >> ~/.ssh/known_hosts
+  script:
+    - echo -e "[prod]\n$DEPLOYMENT_SERVER" >> inventory.ini
+    - ansible-galaxy install dev-sec.os-hardening
+    - ansible-playbook -i inventory.ini ansible-hardening.yml
+With the echo command, we are simply copying the contents of the private key variable stored in Gitlab CI into the id_rsa file under ~/.ssh inside the container.
+eval runs the command ssh-agent in the background and sends the key whenever SSH asks for a key in an automated fashion.
+
+Save changes to the file using the Commit changes button.
+
+Don’t forget to set DEPLOYMENT_SERVER variable under Settings (Project Settings > CI/CD > Variables > Expand > Add Variable), otherwise your build will fail
+
+We can see the results by visiting https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/pipelines.
+
+Click on the appropriate job name to see the output.
+
+Oh, it failed? Why? We also got the following helpful message in the CI output.
+
+$ ansible-playbook -i inventory.ini ansible-hardening.yml
+ ERROR! the playbook: ansible-hardening.yml could not be found
+ ERROR: Job failed: exit status 1
+That makes sense. We didn’t upload the ansible-hardening.yml to the git repository yet.
+
+Let’s copy the hardening script.
+
+---
+- name: Playbook to harden ubuntu OS.
+  hosts: prod
+  remote_user: root
+  become: yes
+
+  roles:
+    - dev-sec.os-hardening
+Visit the add new file URL https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/-/new/main/
+
+Paste the above ansible script into the space provided. Ensure you name the file as ansible-hardening.yml.
+
+Save changes to the repo using the Commit changes button.
+
+We can see the results by visiting https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/pipelines.
+
+Click on the appropriate job name to see the output.
+
+There you have it. We ran ansible hardening locally first and then embedded it into a CI/CD pipeline.
+
+If you see Permisison Denied, Enter passphrase for /root/.ssh/id_rsa or any other SSH related issue, then you have to ensure a proper key is copied in the CI/CD variable DEPLOYMENT_SERVER_SSH_PRIVKEY.
+
+
