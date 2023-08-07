@@ -110,6 +110,22 @@ prod:
     - echo "This is a deploy step."
 
 
+Before we commit this file to the repository, We need to set DOJO_HOST and DOJO_API_TOKEN under secrets variables by visiting the following URL
+
+Gitlab Variables URL: https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/-/settings/ci_cd
+
+Name	Value
+Key	DOJO_HOST
+Value	dojo-p9v0d2l8.lab.practical-devsecops.training
+Name	Value
+Key	DOJO_API_TOKEN
+Value	Find it at https://dojo-p9v0d2l8.lab.practical-devsecops.training/api/key-v2
+You also need to log into the dojo website using the following credentials to fetch the API Key.
+
+Name	Value
+Dojo URL	dojo-p9v0d2l8.lab.practical-devsecops.training/api/key-v2
+Username	root
+Password	pdso-training
 Upload Python Script In CI/CD Pipeline
 
 
