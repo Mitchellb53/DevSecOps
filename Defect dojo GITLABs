@@ -1,0 +1,210 @@
+Simple CICD 
+
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env                       # Create a virtual environment for the python application
+   - source env/bin/activate              # Activate the virtual environment
+   - pip install -r requirements.txt      # Install the required third party packages as defined in requirements.txt
+   - python manage.py check               # Run checks to ensure the application is working fine
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+
+
+
+
+Embed Bandit and upload script in CI/CD pipeline
+
+
+image: docker:20.10  # To run all jobs in this pipeline, use a latest docker image
+
+services:
+  - docker:dind       # To run all jobs in this pipeline, use a docker image which contains a docker daemon running inside (dind - docker in docker). Reference: https://forum.gitlab.com/t/why-services-docker-dind-is-needed-while-already-having-image-docker/43534
+
+stages:
+  - build
+  - test
+  - release
+  - preprod
+  - integration
+  - prod
+
+build:
+  stage: build
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env                       # Create a virtual environment for the python application
+   - source env/bin/activate              # Activate the virtual environment
+   - pip install -r requirements.txt      # Install the required third party packages as defined in requirements.txt
+   - python manage.py check               # Run checks to ensure the application is working fine
+
+test:
+  stage: test
+  image: python:3.6
+  before_script:
+   - pip3 install --upgrade virtualenv
+  script:
+   - virtualenv env
+   - source env/bin/activate
+   - pip install -r requirements.txt
+   - python manage.py test taskManager
+
+sast:
+  stage: build
+  before_script:
+    - apk add py-pip py-requests
+  script:
+    - docker pull hysnsec/bandit  # Download bandit docker container
+    - docker run --user $(id -u):$(id -g) -v $(pwd):/src --rm hysnsec/bandit -r /src -f json -o /src/bandit-output.json
+  after_script:
+    - python3 upload-results.py --host $DOJO_HOST --api_key $DOJO_API_TOKEN --engagement_id 1 --product_id 1 --lead_id 1 --environment "Production" --result_file bandit-output.json --scanner "Bandit Scan"
+  artifacts:
+    paths: [bandit-output.json]
+    when: always
+
+integration:
+  stage: integration
+  script:
+    - echo "This is an integration step"
+
+prod:
+  stage: prod
+  script:
+    - echo "This is a deploy step."
+
+
+Upload Python Script In CI/CD Pipeline
+
+
+Before we can push the upload-results.py file to the repo, we need to set up the git command line.
+
+Initial git setup
+To work with git repositories, we first need to set up a username and email. We can use git config commands to set it up.
+
+git config --global user.email "student@pdevsecops.com"
+
+git config --global user.name "student"
+
+Download/clone/copy the repository
+We can use the git clone command to download the django.nv git repository to our local machine.
+
+git clone git@gitlab-ce-p9v0d2l8:root/django-nv.git
+
+By cloning the above repository, we created a local copy of the remote repository.
+
+Lets cd into this repository to explore its content.
+
+cd django-nv
+
+Add a file to the repository
+First, lets download the upload-results.py script using the following curl command.
+
+curl https://gitlab.practical-devsecops.training/-/snippets/3/raw -o upload-results.py
+
+Add the file and push it to the django.nv repository.
+
+git add upload-results.py
+
+git commit -m "Add upload-results.py file"
+
+Push the changes to the repository
+Since git is a decentralized source code management system, all changes live in your local git repository till you push them to the server. Think it like this git was meant to run even when you do not have internet connectivity, on flights, vessels or in a jungle somewhere__.
+
+We have internet connectivity, lets push it to the remote git repository using the git push command.
+
+git push origin main
+
+Counting objects: 3, done.
+Delta compression using up to 8 threads.
+Compressing objects: 100% (3/3), done.
+Writing objects: 100% (3/3), 1.37 KiB | 1.37 MiB/s, done.
+Total 3 (delta 1), reused 0 (delta 0)
+To http://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv.git
+   577b30f..b0324c0  main -> main
+As discussed earlier, any change to the repo kick starts the pipeline. We can see the result of this change in the pipeline tab of Gitlab CI at https://gitlab-ce-p9v0d2l8.lab.practical-devsecops.training/root/django-nv/pipelines.
+
+There you have it. Every time a developer makes a change, our SAST scanner will run and will automatically upload the results to the vulnerability management system.
+
+Note
+
+If you encounter a 500 error code, please verify whether your environment has been configured correctly or not.
+
+You can inspect the specific variable in Engagements > Environments.
+
+
+QUESTION 
+Use the terminal provided on the right to scan the production machine https://prod-p9v0d2l8.lab.practical-devsecops.training in DevSecOps Box with the help of the ZAP docker image owasp/zap2docker-stable:2.10.0 and save the result at /django-nv/zap-output.xml
+
+ANSWER 
+
+docker run --user $(id -u):$(id -g) -w /zap -v $(pwd):/zap/wrk:rw --rm owasp/zap2docker-stable:2.10.0 zap-baseline.py -t https://prod-p9v0d2l8.lab.practical-devsecops.training -d -x zap-output.xml
+
+QUESTION 
+
+After you store the ZAP scan results, please upload the result manually to Defect Dojo using the terminal on the right
+
+ANSWER 
+
+export API_KEY=$(curl -s -XPOST -H 'content-type: application/json' https://dojo-p9v0d2l8.lab.practical-devsecops.training/api/v2/api-token-auth/ -d '{"username": "root", "password": "pdso-training"}' | jq -r '.token' )
+
+python3 upload-results.py --host dojo-p9v0d2l8.lab.practical-devsecops.training --api_key $API_KEY --engagement_id 1 --product_id 1 --lead_id 1 --environment "Production" --result_file zap-output.xml --scanner "ZAP Scan"
+
+QUESTION 
+
+Please update the .gitlab-ci.yml file and add the upload-results.py as part of the ZAP Scan in the CI/CD pipeline inside the after_script attribute
+
+ANSWER 
+
+Add the below example dast-zap job in .gitlab-ci.yml
+Ensure you set appropriate environment variables in the CI/CD system before trying the below solution.
+
+dast-zap:
+  stage: integration
+  before_script:
+    - apk add py-pip py-requests
+    - docker pull owasp/zap2docker-stable:2.10.0
+  script:
+    - docker run --user $(id -u):$(id -g) -w /zap -v $(pwd):/zap/wrk:rw --rm owasp/zap2docker-stable:2.10.0 zap-baseline.py -t https://prod-p9v0d2l8.lab.practical-devsecops.training -d -x zap-output.xml
+  after_script:
+    - python3 upload-results.py --host $DOJO_HOST --api_key $DOJO_API_TOKEN --engagement_id 1 --product_id 1 --lead_id 1 --environment "Production" --result_file zap-output.xml --scanner "ZAP Scan"
+  artifacts:
+    paths: [zap-output.xml]
+    when: always
+    expire_in: 1 day
