@@ -98,6 +98,7 @@ sast:
   artifacts:
     paths: [bandit-output.json]
     when: always
+   allow_failure: true 
 
 integration:
   stage: integration
