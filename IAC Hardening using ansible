@@ -89,3 +89,208 @@ Note
 How is this helpful in real-world situations? We can find uptime of all of your production machine fleet of 500 machines within 5 minutes.
 
 Let’s move to the next step.
+
+
+
+Tasks
+Use the Ansible command module to find shell module
+
+Hint
+ansible-doc -l | grep shell
+Use inventory file (-i inventory.ini) and run the uptime command on the production machine using shell module
+
+Hint
+ansible -i inventory.ini prod -m shell -a "uptime"
+
+
+Run the Ansible playbook
+Let’s create a playbook to run against the production environment.
+
+cat > playbook.yml <<EOL
+---
+- name: Example playbook to install firewalld
+  hosts: prod
+  remote_user: root
+  become: yes
+  gather_facts: no
+  vars:
+    state: present
+
+  tasks:
+  - name: ensure firewalld is at the latest version
+    apt:
+      name: firewalld
+
+EOL
+Let’s run this playbook against the prod machine.
+
+ansible-playbook -i inventory.ini playbook.yml
+
+PLAY [Example playbook to install firewalld] ******************************************
+
+TASK [ensure firewalld is installed] ***********************************************************************************
+ok: [prod-p9v0d2l8]
+
+PLAY RECAP ************************************************************************
+prod-p9v0d2l8             : ok=1    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Try running the above ansible command once again.
+
+ansible-playbook -i inventory.ini playbook.yml
+
+PLAY [Example playbook to install firewalld] ******************************************
+
+TASK [ensure firewalld is installed] ***********************************************************************************
+ok: [prod-p9v0d2l8]
+
+PLAY RECAP ************************************************************************
+prod-p9v0d2l8             : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+Did you notice the changed=0? What is its importance from a security perspective?
+
+
+
+
+Tasks
+Create a new directory /challenge and create a playbook.yml file inside the /challenge directory. You can use the above playbook.yml syntax as a starter for this task, but the /challenge/playbook.yml needs to use the secfigo.terraform role to install the Terraform utility.
+
+Hint
+Create the /challenge directory and copy an existing inventory.ini file.
+
+mkdir /challenge && cd /challenge
+cp ../inventory.ini .
+Create the playbook.yml file with secfigo.terraform role.
+
+cat > /challenge/playbook.yml <<EOL
+---
+- name: Example playbook to install Terraform using ansible role.
+  hosts: prod
+  remote_user: root
+  become: yes
+
+  roles:
+    - secfigo.terraform
+EOL
+
+QUESTION
+Install secfigo.terraform role using ansible-galaxy.
+
+Hint
+ansible-galaxy install secfigo.terraform
+
+QUESTION
+Execute the /challenge/playbook.yml against the prod machine to install the Terraform utility. Optionally put this hardening job in the CI pipeline.
+
+Hint
+ansible-playbook -i /challenge/inventory.ini /challenge/playbook.yml
+
+Download roles from Ansible Galaxy
+Ansible galaxy helps you in storing open source Ansible roles.
+
+Let’s explore the options it provides us.
+
+ansible-galaxy role --help
+
+usage: ansible-galaxy role [-h] ROLE_ACTION ...
+
+positional arguments:
+  ROLE_ACTION
+    init       Initialize new role with the base structure of a role.
+    remove     Delete roles from roles_path.
+    delete     Removes the role from Galaxy. It does not remove or alter the
+               actual GitHub repository.
+    list       Show the name and version of each role installed in the
+               roles_path.
+    search     Search the Galaxy database by tags, platforms, author and
+               multiple keywords.
+    import     Import a role
+    setup      Manage the integration between Galaxy and the given source.
+    login      Login to api.github.com server in order to use ansible-galaxy
+               role sub command such as 'import', 'delete', 'publish', and
+               'setup'
+    info       View more details about a specific role.
+    install    Install role(s) from file(s), URL(s) or Ansible Galaxy
+
+optional arguments:
+  -h, --help   show this help message and exit
+We can search for desired roles using the search option.
+
+ansible-galaxy search terraform
+
+Please press q to get out of the editor.
+
+It’s a long list, but we will choose the secfigo.terraform role from the search results.
+
+ansible-galaxy install secfigo.terraform
+
+- downloading role 'terraform', owned by secfigo
+- downloading role from https://github.com/secfigo/ansible-role-terraform/archive/1.0.1.tar.gz
+- extracting secfigo.terraform to /root/.ansible/roles/secfigo.terraform
+- secfigo.terraform (1.0.1) was installed successfully
+Notice, the role was installed under /root/.ansible/roles/secfigo.terraform directory?
+
+Let’s create a directory and playbook to install the terraform on the production machine.
+
+mkdir /challenge && cd /challenge
+
+cp ../inventory.ini .
+
+cat > /challenge/playbook.yml <<EOL
+---
+- name: Example playbook to install Terraform using ansible role.
+  hosts: prod
+  remote_user: root
+  become: yes
+
+  roles:
+    - secfigo.terraform
+EOL
+Let’s run this playbook against the prod machine to install the Terraform utility.
+
+ansible-playbook -i /challenge/inventory.ini /challenge/playbook.yml
+
+Harden the production environment
+Dev-Sec Project has lots of good examples on how to create Ansible roles and uses lots of best practices which we can use as a baseline in our roles.
+
+For example, https://github.com/dev-sec/ansible-os-hardening.
+
+Challenges: Using Ansible to Harden prod server
+In this exercise, we will create a new playbook that uses dev-sec.os-hardening role available from Ansible galaxy to harden the prod environment.
+
+Trivia: Which stage should this job run in? and against which machines?
+
+If you are struggling with the exercises, please refer the hints in the lab portal, and the learning resources in the course portal.
+
+Tasks
+Create a new directory /hardening and create an ansible-hardening.yml file inside the /hardening directory. The /hardening/ansible-hardening.yml needs to use the dev-sec.os-hardening role to harden a target server.
+
+Hint
+Create the /hardening directory and copy an existing inventory.ini file.
+
+mkdir /hardening && cd /hardening
+cp ../inventory.ini .
+
+Create the ansible-hardening.yml file with dev-sec.os-hardening role.
+
+cat > /hardening/ansible-hardening.yml <<EOL
+---
+- name: Playbook to harden Ubuntu OS.
+  hosts: prod
+  remote_user: root
+  become: yes
+
+  roles:
+    - dev-sec.os-hardening
+
+EOL
+
+QUESTION
+Install dev-sec.os-hardening role from ansible-galaxy
+
+Hint
+ansible-galaxy install dev-sec.os-hardening
+
+QUESTION
+Execute the /hardening/ansible-hardening.yml to harden the Ubuntu production machine. Optionally put this hardening job in the CI pipeline.
+
+Hint
+ansible-playbook -i /hardening/inventory.ini /hardening/ansible-hardening.yml
+
